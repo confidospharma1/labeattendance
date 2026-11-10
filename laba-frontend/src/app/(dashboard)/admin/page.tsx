@@ -18,7 +18,11 @@ import {
   Check,
   X,
   Loader2,
+  Plus,
+  Calendar,
 } from 'lucide-react';
+import { AddBranchModal } from '@/components/branch/AddBranchModal';
+import { WeeklyScheduleModal } from '@/components/schedule/WeeklyScheduleModal';
 
 interface EmployeeItem {
   id: string;
@@ -55,6 +59,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [isAddBranchOpen, setIsAddBranchOpen] = useState(false);
+  const [selectedFieldEmployee, setSelectedFieldEmployee] = useState<any | null>(null);
 
   const fetchAdminData = useCallback(async () => {
     try {
@@ -386,6 +392,7 @@ export default function AdminDashboard() {
                     <th className="px-5 py-3 font-semibold">Assigned Branch</th>
                     <th className="px-5 py-3 font-semibold">Mobile</th>
                     <th className="px-5 py-3 font-semibold">Status</th>
+                    <th className="px-5 py-3 font-semibold text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E5E5E5]">
@@ -423,6 +430,19 @@ export default function AdminDashboard() {
                           {emp.status}
                         </span>
                       </td>
+                      <td className="px-5 py-3.5 text-right">
+                        {emp.employeeType === 'FIELD_STAFF' ? (
+                          <button
+                            onClick={() => setSelectedFieldEmployee(emp)}
+                            className="inline-flex items-center space-x-1 px-2.5 py-1 text-[11px] font-medium bg-[#171717] hover:bg-black text-white rounded transition-colors"
+                          >
+                            <Calendar className="w-3 h-3" />
+                            <span>7-Day Schedule</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-[#737373]">Fixed Branch</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -433,28 +453,46 @@ export default function AdminDashboard() {
 
         {/* Tab 3: Branches & Geofences */}
         {activeTab === 'branches' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {branches.map((b) => (
-              <div key={b.id} className="bg-white border border-[#E5E5E5] rounded-lg p-5 space-y-3">
-                <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-2">
-                  <div className="font-bold text-sm text-[#171717]">{b.name}</div>
-                  <span className="text-xs font-mono text-[#737373]">{b.branchCode}</span>
-                </div>
-                <div className="text-xs text-[#737373] space-y-1">
-                  <div>Address: <strong className="text-[#171717]">{b.address}</strong></div>
-                  <div>District: <strong className="text-[#171717]">{b.district}, {b.state}</strong></div>
-                </div>
-                <div className="p-2.5 bg-[#F9F9F8] border border-[#E5E5E5] rounded text-xs space-y-1">
-                  <div className="flex items-center space-x-1.5 font-medium text-[#171717]">
-                    <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Coordinates: {Number(b.latitude).toFixed(4)}°, {Number(b.longitude).toFixed(4)}°</span>
-                  </div>
-                  <div className="text-[#737373] pl-5">
-                    Geofence Radius: <strong className="text-emerald-700">{b.geofenceRadiusMetres} metres</strong>
-                  </div>
-                </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between bg-white p-4 rounded-lg border border-[#E5E5E5]">
+              <div>
+                <h3 className="font-semibold text-sm text-[#171717]">Pharmacy Branch Network</h3>
+                <p className="text-xs text-[#737373]">
+                  GPS geofencing centers and active boundaries across Andhra Pradesh
+                </p>
               </div>
-            ))}
+              <button
+                onClick={() => setIsAddBranchOpen(true)}
+                className="flex items-center space-x-1 px-3 py-1.5 bg-[#171717] hover:bg-black text-white rounded text-xs font-medium transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Branch</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {branches.map((b) => (
+                <div key={b.id} className="bg-white border border-[#E5E5E5] rounded-lg p-5 space-y-3">
+                  <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-2">
+                    <div className="font-bold text-sm text-[#171717]">{b.name}</div>
+                    <span className="text-xs font-mono text-[#737373]">{b.branchCode}</span>
+                  </div>
+                  <div className="text-xs text-[#737373] space-y-1">
+                    <div>Address: <strong className="text-[#171717]">{b.address}</strong></div>
+                    <div>District: <strong className="text-[#171717]">{b.district}, {b.state}</strong></div>
+                  </div>
+                  <div className="p-2.5 bg-[#F9F9F8] border border-[#E5E5E5] rounded text-xs space-y-1">
+                    <div className="flex items-center space-x-1.5 font-medium text-[#171717]">
+                      <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Coordinates: {Number(b.latitude).toFixed(4)}°, {Number(b.longitude).toFixed(4)}°</span>
+                    </div>
+                    <div className="text-[#737373] pl-5">
+                      Geofence Radius: <strong className="text-emerald-700">{b.geofenceRadiusMetres} metres</strong>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -543,6 +581,20 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* Modals */}
+        <AddBranchModal
+          isOpen={isAddBranchOpen}
+          onClose={() => setIsAddBranchOpen(false)}
+          onSuccess={fetchAdminData}
+        />
+
+        <WeeklyScheduleModal
+          isOpen={Boolean(selectedFieldEmployee)}
+          employee={selectedFieldEmployee}
+          onClose={() => setSelectedFieldEmployee(null)}
+          onSuccess={fetchAdminData}
+        />
       </main>
     </div>
   );
