@@ -48,7 +48,7 @@ export default function LoginPage() {
             L
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-[#171717]">LABA Sign In</h1>
+            <h1 className="text-xl font-bold tracking-tight text-[#171717]">LABE Sign In</h1>
             <p className="text-xs text-[#737373]">Employee & Administrative Attendance Portal</p>
           </div>
         </div>
@@ -72,7 +72,7 @@ export default function LoginPage() {
               <input
                 type="email"
                 {...register('email')}
-                placeholder="employee@laba.in"
+                placeholder="employee@labe.in"
                 disabled={submitting}
                 className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-[#E5E5E5] rounded focus:outline-none focus:border-[#171717] text-[#171717] placeholder:text-[#737373]/60 transition-colors"
               />

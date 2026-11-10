@@ -8,6 +8,8 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
   try {
     const token =
       req.cookies?.[APP_CONSTANTS.AUTH_COOKIE_NAME] ||
+      req.cookies?.['labe_token'] ||
+      req.cookies?.['laba_token'] ||
       req.headers.authorization?.replace(/^Bearer\s+/, '');
 
     if (!token) {

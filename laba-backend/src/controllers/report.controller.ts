@@ -11,7 +11,7 @@ export class ReportController {
       const dateStr = req.query.date as string | undefined;
       const workbook = await excelService.generateDailyAttendanceWorkbook(req.user!.organizationId, dateStr);
 
-      const filename = `LABA_Attendance_Report_${dateStr || new Date().toISOString().slice(0, 10)}.xlsx`;
+      const filename = `LABE_Attendance_Report_${dateStr || new Date().toISOString().slice(0, 10)}.xlsx`;
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

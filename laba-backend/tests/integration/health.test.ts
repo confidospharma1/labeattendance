@@ -8,7 +8,7 @@ describe('GET /api/v1/health', () => {
     // Endpoint should respond with standard envelope
     expect(res.body).toHaveProperty('success');
     expect(res.body).toHaveProperty('data');
-    expect(res.body.data).toHaveProperty('service', 'laba-backend-api');
+    expect(res.body.data).toHaveProperty('service', 'labe-backend-api');
     expect(res.body.data).toHaveProperty('version', '1.0.0');
     expect(res.body.data).toHaveProperty('timezone', 'Asia/Kolkata');
     expect(res.body.meta).toHaveProperty('timestamp');

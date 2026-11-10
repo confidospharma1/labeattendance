@@ -124,7 +124,7 @@ export default function AdminDashboard() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `LABA_Attendance_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      link.setAttribute('download', `LABE_Attendance_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
@@ -172,7 +172,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <div className="font-semibold text-sm leading-tight text-[#171717]">
-                LABA Management Portal
+                LABE Management Portal
               </div>
               <div className="text-xs text-[#737373]">
                 {user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'} • Organization Central Hub
@@ -408,7 +408,7 @@ export default function AdminDashboard() {
               <div>
                 <h3 className="font-semibold text-sm text-[#171717]">Employee Directory</h3>
                 <p className="text-xs text-[#737373]">
-                  Office Staff & Field Staff registered across LABA Andhra Pradesh branches
+                  Office Staff & Field Staff registered across LABE Andhra Pradesh branches
                 </p>
               </div>
               <button

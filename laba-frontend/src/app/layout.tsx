@@ -4,7 +4,7 @@ import { QueryProvider } from '@/providers/QueryProvider';
 import { AuthProvider } from '@/providers/AuthProvider';
 
 export const metadata: Metadata = {
-  title: 'LABA Attendance Management System',
+  title: 'LABE Attendance Management System',
   description: 'Multi-branch GPS Geofencing Employee Attendance Platform',
 };
 

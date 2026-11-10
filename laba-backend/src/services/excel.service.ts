@@ -31,7 +31,7 @@ export class ExcelService {
     ]);
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'LABA Attendance System';
+    workbook.creator = 'LABE Attendance System';
     workbook.created = new Date();
 
     const recordMap = new Map(records.map((r) => [r.employeeId, r]));
@@ -72,7 +72,7 @@ export class ExcelService {
     ];
     wsSummary.getRow(1).font = { bold: true };
     wsSummary.addRows([
-      { metric: 'Organization', value: organization?.name || 'LABA' },
+      { metric: 'Organization', value: organization?.name || 'LABE' },
       { metric: 'Attendance Work Date', value: dateFormatted },
       { metric: 'Total Active Employees', value: employees.length },
       { metric: 'Present Count', value: presentEmployees.length },

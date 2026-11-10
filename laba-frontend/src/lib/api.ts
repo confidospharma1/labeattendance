@@ -40,7 +40,7 @@ apiClient.interceptors.request.use((config) => {
       config.baseURL = 'https://labeattendance.onrender.com/api/v1';
     }
 
-    const token = localStorage.getItem('laba_token');
+    const token = localStorage.getItem('labe_token') || localStorage.getItem('laba_token');
     if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`;
     }

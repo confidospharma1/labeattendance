@@ -139,7 +139,7 @@ export const app = createApp();
 if (require.main === module || process.env.NODE_ENV !== 'test') {
   const port = env.PORT;
   app.listen(port, () => {
-    logger.info(`🚀 LABA Attendance API running on http://localhost:${port}`);
+    logger.info(`🚀 LABE Attendance API running on http://localhost:${port}`);
     logger.info(`🌍 Environment: ${env.NODE_ENV} | Frontend: ${env.FRONTEND_URL}`);
   });
 }

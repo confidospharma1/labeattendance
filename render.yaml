@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: laba-attendance-api
+    name: labe-attendance-api
     env: node
     plan: free
     rootDir: laba-backend

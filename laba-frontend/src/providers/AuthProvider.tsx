@@ -40,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { user: loggedInUser, token } = res.data.data;
 
     if (token && typeof window !== 'undefined') {
+      localStorage.setItem('labe_token', token);
       localStorage.setItem('laba_token', token);
     }
 
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await apiClient.post('/auth/logout');
     } finally {
       if (typeof window !== 'undefined') {
+        localStorage.removeItem('labe_token');
         localStorage.removeItem('laba_token');
       }
       setUser(null);

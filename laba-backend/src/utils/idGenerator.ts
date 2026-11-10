@@ -1,13 +1,13 @@
 import { PrismaClient, EmployeeType } from '@prisma/client';
 
 /**
- * Generates sequential, collision-free employee codes like LABA-OS-001 or LABA-FS-001.
+ * Generates sequential, collision-free employee codes like LABE-OS-001 or LABE-FS-001.
  */
 export async function generateNextEmployeeCode(
   tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>,
   employeeType: EmployeeType
 ): Promise<string> {
-  const prefix = employeeType === 'FIELD_STAFF' ? 'LABA-FS' : 'LABA-OS';
+  const prefix = employeeType === 'FIELD_STAFF' ? 'LABE-FS' : 'LABE-OS';
 
   const count = await tx.employee.count({
     where: {

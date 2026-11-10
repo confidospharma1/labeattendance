@@ -64,7 +64,7 @@ export default function Home() {
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight text-[#171717]">
-              LABA Attendance Management System
+              LABE Attendance Management System
             </h1>
             <p className="text-sm text-[#737373]">
               Multi-Branch GPS Geofencing Attendance Platform

@@ -4,7 +4,7 @@ const nextConfig = {
   output: process.env.STANDALONE === 'true' ? 'standalone' : undefined,
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://labeattendance.onrender.com/api/v1',
-    NEXT_PUBLIC_APP_NAME: 'LABA Attendance Management System',
+    NEXT_PUBLIC_APP_NAME: 'LABE Attendance Management System',
   },
   async headers() {
     return [

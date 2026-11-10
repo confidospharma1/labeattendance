@@ -69,7 +69,7 @@ export default function EmployeeDashboard() {
             </div>
             <div>
               <div className="font-semibold text-sm leading-tight text-[#171717]">
-                LABA Attendance
+                LABE Attendance
               </div>
               <div className="text-xs text-[#737373]">
                 {emp?.employeeCode || user.role} • {emp?.employeeType || user.role}

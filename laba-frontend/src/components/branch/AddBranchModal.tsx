@@ -100,7 +100,7 @@ export const AddBranchModal: React.FC<AddBranchModalProps> = ({ isOpen, onClose,
               <label className="block font-medium text-[#171717] mb-1">Branch Code</label>
               <input
                 type="text"
-                placeholder="LABA-B-007"
+                placeholder="LABE-B-007"
                 value={branchCode}
                 onChange={(e) => setBranchCode(e.target.value)}
                 required

@@ -105,7 +105,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               <label className="block font-medium text-[#171717] mb-1">Email Address</label>
               <input
                 type="email"
-                placeholder="ramesh@laba.in"
+                placeholder="ramesh@labe.in"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -177,7 +177,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               <label className="block font-medium text-[#171717] mb-1">Contact ID / Ref (Optional)</label>
               <input
                 type="text"
-                placeholder="LABA-CONT-01"
+                placeholder="LABE-CONT-01"
                 value={contactId}
                 onChange={(e) => setContactId(e.target.value)}
                 className="w-full p-2 border border-[#E5E5E5] rounded focus:outline-none focus:ring-1 focus:ring-black"

@@ -1,7 +1,7 @@
 {
-  "name": "laba-backend",
+  "name": "labe-backend",
   "version": "1.0.0",
-  "description": "LABA Multi-Branch GPS Geofencing Attendance Management Backend API",
+  "description": "LABE Multi-Branch GPS Geofencing Attendance Management Backend API",
   "main": "dist/app.js",
   "scripts": {
     "build": "prisma generate && tsc",
@@ -20,12 +20,12 @@
     "attendance",
     "gps",
     "geofencing",
-    "laba",
+    "labe",
     "express",
     "prisma",
     "postgresql"
   ],
-  "author": "LABA",
+  "author": "LABE",
   "license": "UNLICENSED",
   "dependencies": {
     "@prisma/client": "^5.22.0",

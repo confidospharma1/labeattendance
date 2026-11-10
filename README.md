@@ -1,6 +1,6 @@
-# LABA Multi-Branch GPS Geofencing Attendance Management System
+# LABE Multi-Branch GPS Geofencing Attendance Management System
 
-Enterprise attendance management web application engineered for **LABA** pharmacy branches across Andhra Pradesh, India.
+Enterprise attendance management web application engineered for **LABE** pharmacy branches across Andhra Pradesh, India.
 
 ---
 

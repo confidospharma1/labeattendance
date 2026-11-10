@@ -1,5 +1,5 @@
 // prisma/schema.prisma
-// LABA Attendance Management System Database Schema
+// LABE Attendance Management System Database Schema
 // Target Database: Neon PostgreSQL
 
 generator client {
