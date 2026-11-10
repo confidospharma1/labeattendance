@@ -540,6 +540,277 @@ export class AttendanceService {
       recordsSummary: records.slice(0, 10),
     };
   }
+
+  /**
+   * Admin direct update of an attendance record with full audit trail.
+   */
+  async updateAttendanceRecord(
+    adminUserId: string,
+    organizationId: string,
+    recordId: string,
+    data: {
+      status?: AttendanceStatus;
+      checkInAt?: string;
+      checkOutAt?: string;
+      workReport?: string;
+      checkInLocationName?: string;
+      checkOutLocationName?: string;
+      notes?: string;
+    }
+  ) {
+    const existing = await prisma.attendanceRecord.findFirst({
+      where: { id: recordId, organizationId },
+      include: { employee: true },
+    });
+
+    if (!existing) {
+      throw new AppError('Attendance record not found.', 404, 'NOT_FOUND');
+    }
+
+    const updated = await prisma.attendanceRecord.update({
+      where: { id: recordId },
+      data: {
+        ...(data.status && { status: data.status }),
+        ...(data.checkInAt !== undefined && { checkInAt: data.checkInAt ? new Date(data.checkInAt) : null }),
+        ...(data.checkOutAt !== undefined && { checkOutAt: data.checkOutAt ? new Date(data.checkOutAt) : null }),
+        ...(data.workReport !== undefined && { workReport: data.workReport }),
+        ...(data.checkInLocationName !== undefined && { checkInLocationName: data.checkInLocationName }),
+        ...(data.checkOutLocationName !== undefined && { checkOutLocationName: data.checkOutLocationName }),
+        isCorrected: true,
+        isAdminCreated: true,
+      },
+      include: { employee: true },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        organizationId,
+        actorId: adminUserId,
+        actorRole: 'ADMIN',
+        action: 'ATTENDANCE_ADMIN_MODIFIED',
+        entityType: 'attendance_records',
+        entityId: recordId,
+        beforeState: {
+          status: existing.status,
+          checkInAt: existing.checkInAt,
+          checkOutAt: existing.checkOutAt,
+          workReport: existing.workReport,
+        },
+        afterState: {
+          status: updated.status,
+          checkInAt: updated.checkInAt,
+          checkOutAt: updated.checkOutAt,
+          workReport: updated.workReport,
+          notes: data.notes,
+        },
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Admin deletion of an attendance record from entire database.
+   */
+  async deleteAttendanceRecord(
+    adminUserId: string,
+    organizationId: string,
+    recordId: string
+  ) {
+    const existing = await prisma.attendanceRecord.findFirst({
+      where: { id: recordId, organizationId },
+      include: { employee: true },
+    });
+
+    if (!existing) {
+      throw new AppError('Attendance record not found.', 404, 'NOT_FOUND');
+    }
+
+    return prisma.$transaction(async (tx) => {
+      // 1. Delete associated corrections
+      await tx.attendanceCorrection.deleteMany({
+        where: { attendanceRecordId: recordId },
+      });
+
+      // 2. Delete the record
+      await tx.attendanceRecord.delete({
+        where: { id: recordId },
+      });
+
+      // 3. Record audit log
+      await tx.auditLog.create({
+        data: {
+          organizationId,
+          actorId: adminUserId,
+          actorRole: 'ADMIN',
+          action: 'ATTENDANCE_RECORD_DELETED',
+          entityType: 'attendance_records',
+          entityId: recordId,
+          beforeState: {
+            employeeId: existing.employeeId,
+            employeeName: existing.employee.fullName,
+            workDate: existing.workDate,
+            status: existing.status,
+          },
+          afterState: { deleted: true },
+        },
+      });
+
+      return {
+        success: true,
+        message: `Attendance record for ${existing.employee.fullName} on ${existing.workDate.toISOString().slice(0, 10)} deleted.`,
+      };
+    });
+  }
+
+  /**
+   * Comprehensive Analytics Aggregation for Admin & Super Admin.
+   */
+  async getAnalytics(organizationId: string, days = 7) {
+    const totalActiveEmployees = await prisma.employee.count({
+      where: { organizationId, status: EmployeeStatus.ACTIVE },
+    });
+
+    const branches = await prisma.branch.findMany({
+      where: { organizationId, isActive: true },
+      include: {
+        assignments: {
+          where: { isCurrent: true },
+          include: { employee: true },
+        },
+      },
+    });
+
+    // Determine date range in IST
+    const now = new Date();
+    const startDate = new Date();
+    startDate.setDate(now.getDate() - (days - 1));
+    startDate.setHours(0, 0, 0, 0);
+
+    const records = await prisma.attendanceRecord.findMany({
+      where: {
+        organizationId,
+        workDate: {
+          gte: startDate,
+        },
+      },
+      include: {
+        employee: {
+          include: {
+            branchAssignments: {
+              where: { isCurrent: true },
+              include: { branch: true },
+            },
+          },
+        },
+      },
+      orderBy: { workDate: 'asc' },
+    });
+
+    // Group records by day
+    const dayMap = new Map<string, typeof records>();
+    for (let i = 0; i < days; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      dayMap.set(key, []);
+    }
+
+    for (const rec of records) {
+      const key = rec.workDate.toISOString().slice(0, 10);
+      if (dayMap.has(key)) {
+        dayMap.get(key)!.push(rec);
+      }
+    }
+
+    const trends = Array.from(dayMap.entries()).map(([dateStr, dayRecords]) => {
+      const d = new Date(dateStr);
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const dayOfWeek = dayNames[d.getUTCDay()];
+
+      const officePresent = dayRecords.filter(
+        (r) => r.employee.employeeType === 'OFFICE_STAFF' && r.status !== AttendanceStatus.ABSENT
+      ).length;
+      const fieldPresent = dayRecords.filter(
+        (r) => r.employee.employeeType === 'FIELD_STAFF' && r.status !== AttendanceStatus.ABSENT
+      ).length;
+      const totalPresent = officePresent + fieldPresent;
+      const reportCount = dayRecords.filter((r) => !!r.workReport).length;
+      const geofenceValidCount = dayRecords.filter(
+        (r) => r.checkInGeofenceValid === true || r.checkInLocationRefType === 'UNRESTRICTED'
+      ).length;
+
+      const rate = totalActiveEmployees > 0 ? Math.round((totalPresent / totalActiveEmployees) * 100) : 0;
+
+      return {
+        date: dateStr,
+        dayOfWeek,
+        totalPresent,
+        officePresent,
+        fieldPresent,
+        absentCount: Math.max(0, totalActiveEmployees - totalPresent),
+        reportCount,
+        geofenceValidCount,
+        rate,
+      };
+    });
+
+    // Branch Performance Breakdown
+    const branchPerformance = branches.map((b) => {
+      const branchStaffCount = b.assignments.length;
+      const branchStaffIds = new Set(b.assignments.map((a) => a.employeeId));
+
+      const branchRecordsToday = (records || []).filter((r) => {
+        const isToday = r.workDate.toISOString().slice(0, 10) === now.toISOString().slice(0, 10);
+        return isToday && branchStaffIds.has(r.employeeId);
+      });
+
+      const presentToday = branchRecordsToday.length;
+      const geofenceValidToday = branchRecordsToday.filter(
+        (r) => r.checkInGeofenceValid === true
+      ).length;
+
+      const attendanceRate = branchStaffCount > 0 ? Math.round((presentToday / branchStaffCount) * 100) : 0;
+      const geofenceComplianceRate = presentToday > 0 ? Math.round((geofenceValidToday / presentToday) * 100) : 100;
+
+      return {
+        id: b.id,
+        name: b.name,
+        branchCode: b.branchCode,
+        district: b.district,
+        totalStaff: branchStaffCount,
+        presentToday,
+        attendanceRate,
+        geofenceComplianceRate,
+        radiusMetres: b.geofenceRadiusMetres,
+      };
+    });
+
+    // Aggregate overall KPI metrics
+    const totalRecords = records.length;
+    const totalWithReports = records.filter((r) => !!r.workReport).length;
+    const totalGeofenceValid = records.filter(
+      (r) => r.checkInGeofenceValid === true || r.checkInLocationRefType === 'UNRESTRICTED'
+    ).length;
+
+    const avgRate =
+      trends.length > 0 ? Math.round(trends.reduce((acc, t) => acc + t.rate, 0) / trends.length) : 0;
+    const reportRate = totalRecords > 0 ? Math.round((totalWithReports / totalRecords) * 100) : 0;
+    const geofenceRate = totalRecords > 0 ? Math.round((totalGeofenceValid / totalRecords) * 100) : 100;
+
+    return {
+      timeframeDays: days,
+      totalActiveEmployees,
+      kpis: {
+        overallAttendanceRate: avgRate,
+        workReportCompletionRate: reportRate,
+        geofenceComplianceRate: geofenceRate,
+        totalAttendanceEntries: totalRecords,
+      },
+      trends,
+      branchPerformance,
+    };
+  }
 }
 
 export const attendanceService = new AttendanceService();

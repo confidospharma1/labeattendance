@@ -23,10 +23,13 @@ export const updateEmployeeSchema = z.object({
   }),
   body: z.object({
     fullName: z.string().min(2).trim().optional(),
+    email: z.string().email().toLowerCase().trim().optional(),
     mobile: z.string().regex(/^[6-9]\d{9}$/).optional(),
+    employeeType: z.enum(['OFFICE_STAFF', 'FIELD_STAFF', 'ADMIN', 'SUPER_ADMIN']).optional(),
+    status: z.enum(['ACTIVE', 'SUSPENDED', 'DEACTIVATED']).optional(),
     contactId: z.string().optional(),
     profileNotes: z.string().optional(),
-    branchId: z.string().uuid().optional(),
+    branchId: z.string().uuid().optional().nullable(),
   }),
 });
 

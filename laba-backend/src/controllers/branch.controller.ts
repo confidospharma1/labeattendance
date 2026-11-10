@@ -55,6 +55,20 @@ export class BranchController {
       next(err);
     }
   }
+
+  public async deleteBranch(req: Request, res: Response, next: NextFunction) {
+    try {
+      const branchId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const result = await branchService.deleteBranch(
+        req.user!.userId,
+        req.user!.organizationId,
+        branchId
+      );
+      return sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export const branchController = new BranchController();

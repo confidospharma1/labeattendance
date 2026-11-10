@@ -245,6 +245,57 @@ export class BranchService {
       longitude: updated.longitude.toNumber(),
     };
   }
+
+  /**
+   * Permanently deletes a pharmacy branch and unlinks staff assignments.
+   */
+  public async deleteBranch(
+    deleterUserId: string,
+    organizationId: string,
+    branchId: string
+  ) {
+    const existing = await prisma.branch.findFirst({
+      where: { id: branchId, organizationId },
+    });
+
+    if (!existing) {
+      throw new AppError('Branch not found in organization.', 404, 'NOT_FOUND');
+    }
+
+    return prisma.$transaction(async (tx) => {
+      // 1. Delete branch assignments
+      await tx.branchAssignment.deleteMany({
+        where: { branchId },
+      });
+
+      // 2. Delete branch record
+      await tx.branch.delete({
+        where: { id: branchId },
+      });
+
+      // 3. Record audit log
+      await tx.auditLog.create({
+        data: {
+          organizationId,
+          actorId: deleterUserId,
+          actorRole: 'ADMIN',
+          action: 'BRANCH_DELETED',
+          entityType: 'branches',
+          entityId: branchId,
+          beforeState: {
+            branchCode: existing.branchCode,
+            name: existing.name,
+          },
+          afterState: { deleted: true },
+        },
+      });
+
+      return {
+        success: true,
+        message: `Branch ${existing.name} (${existing.branchCode}) was permanently removed.`,
+      };
+    });
+  }
 }
 
 export const branchService = new BranchService();

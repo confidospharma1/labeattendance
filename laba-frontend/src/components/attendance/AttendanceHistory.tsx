@@ -69,8 +69,8 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ records, o
           No previous attendance records found.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto -mx-1 sm:mx-0">
+          <table className="w-full text-left text-xs min-w-[560px]">
             <thead>
               <tr className="border-b border-[#E5E5E5] text-[#737373]">
                 <th className="pb-2 font-medium">Work Date</th>

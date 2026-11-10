@@ -223,7 +223,7 @@ export class EmployeeService {
   ) {
     const existing = await prisma.employee.findFirst({
       where: { id: employeeId, organizationId, deletedAt: null },
-      include: { branchAssignments: { where: { isCurrent: true } } },
+      include: { user: true, branchAssignments: { where: { isCurrent: true } } },
     });
 
     if (!existing) {
@@ -232,9 +232,14 @@ export class EmployeeService {
 
     return prisma.$transaction(async (tx) => {
       // Handle branch transfer if provided and different
-      if (input.branchId) {
+      if (input.branchId !== undefined) {
         const currentAssignment = existing.branchAssignments[0];
-        if (!currentAssignment || currentAssignment.branchId !== input.branchId) {
+        if (input.branchId === null && currentAssignment) {
+          await tx.branchAssignment.update({
+            where: { id: currentAssignment.id },
+            data: { isCurrent: false, effectiveTo: new Date() },
+          });
+        } else if (input.branchId && (!currentAssignment || currentAssignment.branchId !== input.branchId)) {
           // Close old assignment
           if (currentAssignment) {
             await tx.branchAssignment.update({
@@ -256,11 +261,26 @@ export class EmployeeService {
         }
       }
 
+      // If email or role is updated, update the user account
+      if (input.email || input.employeeType) {
+        await tx.user.update({
+          where: { id: existing.userId },
+          data: {
+            ...(input.email && { email: input.email }),
+            ...(input.employeeType && {
+              role: input.employeeType === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : input.employeeType === 'ADMIN' ? 'ADMIN' : input.employeeType === 'FIELD_STAFF' ? 'FIELD_STAFF' : 'OFFICE_STAFF',
+            }),
+          },
+        });
+      }
+
       const updated = await tx.employee.update({
         where: { id: employeeId },
         data: {
           ...(input.fullName && { fullName: input.fullName }),
           ...(input.mobile && { mobile: input.mobile }),
+          ...(input.employeeType && { employeeType: input.employeeType as any }),
+          ...(input.status && { status: input.status }),
           ...(input.contactId !== undefined && { contactId: input.contactId }),
           ...(input.profileNotes !== undefined && { profileNotes: input.profileNotes }),
         },
@@ -274,12 +294,88 @@ export class EmployeeService {
           action: 'EMPLOYEE_UPDATED',
           entityType: 'employees',
           entityId: employeeId,
-          beforeState: { fullName: existing.fullName, mobile: existing.mobile },
-          afterState: { fullName: updated.fullName, mobile: updated.mobile },
+          beforeState: { fullName: existing.fullName, mobile: existing.mobile, status: existing.status },
+          afterState: { fullName: updated.fullName, mobile: updated.mobile, status: updated.status },
         },
       });
 
       return updated;
+    });
+  }
+
+  /**
+   * Permanently deletes employee and associated records from the entire database.
+   */
+  public async deleteEmployee(
+    deleterUserId: string,
+    organizationId: string,
+    employeeId: string
+  ) {
+    const existing = await prisma.employee.findFirst({
+      where: { id: employeeId, organizationId },
+      include: { user: true },
+    });
+
+    if (!existing) {
+      throw new AppError('Employee not found in organization.', 404, 'NOT_FOUND');
+    }
+
+    return prisma.$transaction(async (tx) => {
+      // 1. Unlink managed branches
+      await tx.branch.updateMany({
+        where: { managerEmployeeId: employeeId },
+        data: { managerEmployeeId: null },
+      });
+
+      // 2. Delete attendance corrections
+      await tx.attendanceCorrection.deleteMany({
+        where: { employeeId },
+      });
+
+      // 3. Delete attendance records
+      await tx.attendanceRecord.deleteMany({
+        where: { employeeId },
+      });
+
+      // 4. Delete field staff schedules
+      await tx.fieldStaffSchedule.deleteMany({
+        where: { employeeId },
+      });
+
+      // 5. Delete branch assignments
+      await tx.branchAssignment.deleteMany({
+        where: { employeeId },
+      });
+
+      // 6. Delete employee profile
+      await tx.employee.delete({
+        where: { id: employeeId },
+      });
+
+      // 7. Delete linked user account
+      await tx.user.delete({
+        where: { id: existing.userId },
+      });
+
+      // 8. Record immutable audit log
+      await tx.auditLog.create({
+        data: {
+          organizationId,
+          actorId: deleterUserId,
+          actorRole: 'ADMIN',
+          action: 'EMPLOYEE_DELETED',
+          entityType: 'employees',
+          entityId: employeeId,
+          beforeState: {
+            employeeCode: existing.employeeCode,
+            fullName: existing.fullName,
+            email: existing.user.email,
+          },
+          afterState: { deleted: true },
+        },
+      });
+
+      return { success: true, message: `Employee ${existing.fullName} (${existing.employeeCode}) was permanently removed.` };
     });
   }
 

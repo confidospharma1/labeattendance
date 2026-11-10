@@ -25,8 +25,13 @@ router.post('/corrections', validate(requestCorrectionSchema), attendanceControl
 router.get('/corrections', authorize(['SUPER_ADMIN', 'ADMIN']), attendanceController.listCorrections);
 router.patch('/corrections/:id', authorize(['SUPER_ADMIN', 'ADMIN']), validate(reviewCorrectionSchema), attendanceController.reviewCorrection);
 
-// Admin Dashboard Summary
+// Admin Dashboard Summary & Analytics
 router.get('/dashboard', authorize(['SUPER_ADMIN', 'ADMIN']), attendanceController.getDashboardSummary);
+router.get('/analytics', authorize(['SUPER_ADMIN', 'ADMIN']), attendanceController.getAnalytics);
+
+// Admin Direct Modification & Permanent Deletion
+router.patch('/records/:id', authorize(['SUPER_ADMIN', 'ADMIN']), attendanceController.updateRecord);
+router.delete('/records/:id', authorize(['SUPER_ADMIN', 'ADMIN']), attendanceController.deleteRecord);
 
 export const attendanceRoutes = router;
 

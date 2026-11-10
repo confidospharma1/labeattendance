@@ -38,12 +38,26 @@ router.get(
   employeeController.getEmployeeById
 );
 
-// Update employee details
+// Update employee details (PUT and PATCH)
 router.put(
   '/:id',
   authorize(['SUPER_ADMIN', 'ADMIN']),
   validate(updateEmployeeSchema),
   employeeController.updateEmployee
+);
+
+router.patch(
+  '/:id',
+  authorize(['SUPER_ADMIN', 'ADMIN']),
+  validate(updateEmployeeSchema),
+  employeeController.updateEmployee
+);
+
+// Delete employee from entire database
+router.delete(
+  '/:id',
+  authorize(['SUPER_ADMIN', 'ADMIN']),
+  employeeController.deleteEmployee
 );
 
 // Update status (Active/Suspended/Deactivated)

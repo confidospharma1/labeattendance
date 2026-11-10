@@ -42,5 +42,19 @@ router.put(
   branchController.updateBranch
 );
 
+router.patch(
+  '/:id',
+  authorize(['SUPER_ADMIN', 'ADMIN']),
+  validate(updateBranchSchema),
+  branchController.updateBranch
+);
+
+// Delete branch (Super Admin and Admin only)
+router.delete(
+  '/:id',
+  authorize(['SUPER_ADMIN', 'ADMIN']),
+  branchController.deleteBranch
+);
+
 export const branchRoutes = router;
 

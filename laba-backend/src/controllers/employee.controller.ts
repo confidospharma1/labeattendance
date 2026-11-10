@@ -70,6 +70,20 @@ export class EmployeeController {
       next(err);
     }
   }
+
+  public async deleteEmployee(req: Request, res: Response, next: NextFunction) {
+    try {
+      const employeeId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const result = await employeeService.deleteEmployee(
+        req.user!.userId,
+        req.user!.organizationId,
+        employeeId
+      );
+      return sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export const employeeController = new EmployeeController();

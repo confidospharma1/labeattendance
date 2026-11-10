@@ -106,6 +106,48 @@ export class AttendanceController {
       next(error);
     }
   }
+
+  async updateRecord(req: Request, res: Response, next: NextFunction) {
+    try {
+      const recordId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const updated = await attendanceService.updateAttendanceRecord(
+        req.user!.userId,
+        req.user!.organizationId,
+        recordId,
+        req.body
+      );
+      return sendSuccess(res, updated);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteRecord(req: Request, res: Response, next: NextFunction) {
+    try {
+      const recordId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const result = await attendanceService.deleteAttendanceRecord(
+        req.user!.userId,
+        req.user!.organizationId,
+        recordId
+      );
+      return sendSuccess(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getAnalytics(req: Request, res: Response, next: NextFunction) {
+    try {
+      const days = req.query.days ? parseInt(req.query.days as string, 10) : 7;
+      const analytics = await attendanceService.getAnalytics(
+        req.user!.organizationId,
+        Number.isNaN(days) ? 7 : days
+      );
+      return sendSuccess(res, analytics);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const attendanceController = new AttendanceController();
