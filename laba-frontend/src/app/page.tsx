@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api';
-import { Activity, Database } from 'lucide-react';
+import { Activity, Database, RefreshCw } from 'lucide-react';
 
 interface HealthData {
   status: string;
@@ -18,19 +18,42 @@ export default function Home() {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const checkHealth = useCallback(async (isManual = false) => {
+    if (isManual) {
+      setLoading(true);
+      setError(null);
+    }
+    try {
+      const res = await apiClient.get('/health');
+      if (res.data?.data) {
+        setHealth(res.data.data);
+        setError(null);
+      } else {
+        throw new Error('Unexpected health check response');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to connect to backend API');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    apiClient
-      .get('/health')
-      .then((res) => {
-        setHealth(res.data.data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message || 'Failed to connect to backend API');
-        setLoading(false);
-      });
-  }, []);
+    checkHealth();
+  }, [checkHealth]);
+
+  // Automatic retry for Render spin-up latency (tries up to 5 times every 3.5s if initially disconnected)
+  useEffect(() => {
+    if (error && retryCount < 5) {
+      const timer = setTimeout(() => {
+        setRetryCount((prev) => prev + 1);
+        checkHealth();
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [error, retryCount, checkHealth]);
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#F7F6F2]">
@@ -50,9 +73,23 @@ export default function Home() {
         </div>
 
         <div className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-[#737373]">
-            System Status & Connectivity
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-[#737373]">
+              System Status & Connectivity
+            </h2>
+            <button
+              onClick={() => {
+                setRetryCount(0);
+                checkHealth(true);
+              }}
+              disabled={loading}
+              className="text-xs text-[#737373] hover:text-[#171717] flex items-center space-x-1 disabled:opacity-50"
+              title="Refresh connectivity status"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>{loading ? 'Checking...' : 'Refresh'}</span>
+            </button>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="border border-[#E5E5E5] rounded p-3 bg-[#F7F6F2]">
@@ -66,7 +103,7 @@ export default function Home() {
                 ) : error ? (
                   <span className="text-red-600">Disconnected</span>
                 ) : (
-                  <span className="text-emerald-700 flex items-center space-x-1.5">
+                  <span className="text-emerald-700 flex items-center space-x-1.5 font-semibold">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span>Connected</span>
                   </span>
@@ -85,7 +122,7 @@ export default function Home() {
                 ) : error || health?.database !== 'connected' ? (
                   <span className="text-red-600">Offline</span>
                 ) : (
-                  <span className="text-emerald-700 flex items-center space-x-1.5">
+                  <span className="text-emerald-700 flex items-center space-x-1.5 font-semibold">
                     <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                     <span>Online</span>
                   </span>
@@ -93,6 +130,21 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded text-xs text-red-800 flex items-center justify-between">
+              <span>{error} {retryCount < 5 ? `(Auto-retrying ${retryCount + 1}/5...)` : ''}</span>
+              <button
+                onClick={() => {
+                  setRetryCount(0);
+                  checkHealth(true);
+                }}
+                className="underline font-semibold ml-2"
+              >
+                Retry
+              </button>
+            </div>
+          )}
 
           <div className="border border-[#E5E5E5] rounded p-4 text-xs text-[#737373] space-y-2">
             <div className="flex justify-between">
@@ -122,4 +174,3 @@ export default function Home() {
     </main>
   );
 }
-

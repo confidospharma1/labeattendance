@@ -3,7 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   output: process.env.STANDALONE === 'true' ? 'standalone' : undefined,
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://labeattendance.onrender.com/api/v1',
     NEXT_PUBLIC_APP_NAME: 'LABA Attendance Management System',
   },
   async headers() {
