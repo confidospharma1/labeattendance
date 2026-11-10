@@ -204,3 +204,4 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
     </div>
   );
 };
+

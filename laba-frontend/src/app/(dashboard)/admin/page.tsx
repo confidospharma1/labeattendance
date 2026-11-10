@@ -55,32 +55,39 @@ export default function AdminDashboard() {
   const { user, logout, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'attendance' | 'employees' | 'branches' | 'corrections'>('attendance');
+  const [activeTab, setActiveTab] = useState<'attendance' | 'employees' | 'branches' | 'corrections' | 'audit' | 'policy'>('attendance');
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [branches, setBranches] = useState<any[]>([]);
   const [corrections, setCorrections] = useState<any[]>([]);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [policy, setPolicy] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [isAddBranchOpen, setIsAddBranchOpen] = useState(false);
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
+  const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
   const [selectedFieldEmployee, setSelectedFieldEmployee] = useState<any | null>(null);
 
   const fetchAdminData = useCallback(async () => {
     try {
       setLoading(true);
-      const [empRes, summaryRes, branchRes, corrRes] = await Promise.all([
+      const [empRes, summaryRes, branchRes, corrRes, policyRes, auditRes] = await Promise.all([
         apiClient.get('/employees?limit=50'),
         apiClient.get('/attendance/dashboard'),
         apiClient.get('/branches'),
         apiClient.get('/attendance/corrections'),
+        apiClient.get('/policies/current').catch(() => ({ data: { data: null } })),
+        apiClient.get('/audit-logs?limit=50').catch(() => ({ data: { data: [] } })),
       ]);
 
       setEmployees(empRes.data.data.items || []);
       setSummary(summaryRes.data.data || null);
       setBranches(branchRes.data.data.branches || []);
       setCorrections(corrRes.data.data || []);
+      setPolicy(policyRes.data.data || null);
+      setAuditLogs(auditRes.data.data || []);
     } catch (err) {
       console.error('Failed to load admin dashboard data', err);
     } finally {
@@ -288,6 +295,24 @@ export default function AdminDashboard() {
           >
             Correction Requests ({corrections.filter((c) => c.status === 'PENDING').length} Pending)
           </button>
+          <button
+            onClick={() => setActiveTab('policy')}
+            className={`px-3 py-1.5 rounded transition-colors ${
+              activeTab === 'policy' ? 'bg-[#171717] text-white' : 'text-[#737373] hover:text-[#171717]'
+            }`}
+          >
+            Policy Settings
+          </button>
+          {user?.role === 'SUPER_ADMIN' && (
+            <button
+              onClick={() => setActiveTab('audit')}
+              className={`px-3 py-1.5 rounded transition-colors ${
+                activeTab === 'audit' ? 'bg-[#171717] text-white' : 'text-[#737373] hover:text-[#171717]'
+              }`}
+            >
+              Audit Trail ({auditLogs.length})
+            </button>
+          )}
         </div>
 
         {/* Tab 1: Live Attendance */}
@@ -594,6 +619,118 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* Tab 5: Policy Settings */}
+        {activeTab === 'policy' && (
+          <div className="bg-white border border-[#E5E5E5] rounded-lg p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
+              <div>
+                <h3 className="font-semibold text-sm text-[#171717]">Company Attendance Policy (v{policy?.version || 1})</h3>
+                <p className="text-xs text-[#737373]">Authoritative time windows and boundary enforcement parameters</p>
+              </div>
+              {user?.role === 'SUPER_ADMIN' && (
+                <button
+                  onClick={() => setIsPolicyModalOpen(true)}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#171717] hover:bg-black text-white rounded text-xs font-medium transition-colors"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                  <span>Configure Policy</span>
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+              <div className="p-4 bg-[#F9F9F8] border border-[#E5E5E5] rounded">
+                <div className="text-xs text-[#737373] mb-1">Morning Check-In Window</div>
+                <div className="text-lg font-bold text-[#171717]">
+                  {policy?.morningStart || '09:00'} – {policy?.morningEnd || '09:20'}
+                </div>
+                <div className="text-[11px] text-[#737373] mt-1">IST (Asia/Kolkata)</div>
+              </div>
+
+              <div className="p-4 bg-[#F9F9F8] border border-[#E5E5E5] rounded">
+                <div className="text-xs text-[#737373] mb-1">Evening Check-Out Window</div>
+                <div className="text-lg font-bold text-[#171717]">
+                  {policy?.eveningStart || '16:30'} – {policy?.eveningEnd || '17:00'}
+                </div>
+                <div className="text-[11px] text-[#737373] mt-1">IST (Mandatory Report)</div>
+              </div>
+
+              <div className="p-4 bg-[#F9F9F8] border border-[#E5E5E5] rounded">
+                <div className="text-xs text-[#737373] mb-1">Default Geofence Radius</div>
+                <div className="text-lg font-bold text-blue-700">
+                  {policy?.defaultGeofenceRadiusMetres || 100} metres
+                </div>
+                <div className="text-[11px] text-[#737373] mt-1">Per-branch override enabled</div>
+              </div>
+
+              <div className="p-4 bg-[#F9F9F8] border border-[#E5E5E5] rounded">
+                <div className="text-xs text-[#737373] mb-1">GPS Accuracy Max Threshold</div>
+                <div className="text-lg font-bold text-amber-700">
+                  {policy?.gpsAccuracyRejectMetres || 200} metres
+                </div>
+                <div className="text-[11px] text-[#737373] mt-1">Rejects inaccurate spoofing</div>
+              </div>
+            </div>
+
+            {policy?.notes && (
+              <div className="p-3 bg-[#F0EFEB] rounded text-xs text-[#171717]">
+                <strong>Policy Notes:</strong> {policy.notes}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 6: Audit Trail */}
+        {activeTab === 'audit' && (
+          <div className="bg-white border border-[#E5E5E5] rounded-lg overflow-hidden">
+            <div className="px-5 py-4 border-b border-[#E5E5E5]">
+              <h3 className="font-semibold text-sm text-[#171717]">System Audit Log Trail</h3>
+              <p className="text-xs text-[#737373]">Immutable record of authentication, geofence, and administration actions</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#F7F6F2] border-b border-[#E5E5E5] text-[#737373] uppercase tracking-wider">
+                  <tr>
+                    <th className="px-5 py-3 font-semibold">Timestamp</th>
+                    <th className="px-5 py-3 font-semibold">Actor</th>
+                    <th className="px-5 py-3 font-semibold">Action</th>
+                    <th className="px-5 py-3 font-semibold">Entity</th>
+                    <th className="px-5 py-3 font-semibold">IP Address</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E5E5E5]">
+                  {auditLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-8 text-center text-[#737373]">
+                        No audit logs recorded yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    auditLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-[#F9F9F8]">
+                        <td className="px-5 py-3 text-[#737373]">
+                          {new Date(log.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                        </td>
+                        <td className="px-5 py-3 font-medium text-[#171717]">
+                          {log.actor?.email || 'System'}
+                          <span className="text-[10px] text-[#737373] block">{log.actorRole}</span>
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className="font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-[11px]">
+                            {log.action}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-[#737373]">{log.entityType}</td>
+                        <td className="px-5 py-3 text-[#737373] font-mono">{log.ipAddress || '—'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Modals */}
         <AddBranchModal
           isOpen={isAddBranchOpen}
@@ -612,6 +749,13 @@ export default function AdminDashboard() {
           isOpen={isAddEmployeeOpen}
           branches={branches}
           onClose={() => setIsAddEmployeeOpen(false)}
+          onSuccess={fetchAdminData}
+        />
+
+        <PolicyModal
+          isOpen={isPolicyModalOpen}
+          currentPolicy={policy}
+          onClose={() => setIsPolicyModalOpen(false)}
           onSuccess={fetchAdminData}
         />
       </main>

@@ -66,7 +66,10 @@ export default function Home() {
                 ) : error ? (
                   <span className="text-red-600">Disconnected</span>
                 ) : (
-                  <span className="text-emerald-700">Healthy (v{health?.version})</span>
+                  <span className="text-emerald-700 flex items-center space-x-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Connected</span>
+                  </span>
                 )}
               </div>
             </div>
@@ -79,10 +82,13 @@ export default function Home() {
               <div className="font-medium text-sm">
                 {loading ? (
                   <span className="text-amber-600">Checking...</span>
-                ) : error ? (
+                ) : error || health?.database !== 'connected' ? (
                   <span className="text-red-600">Offline</span>
                 ) : (
-                  <span className="text-emerald-700">{health?.database}</span>
+                  <span className="text-emerald-700 flex items-center space-x-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>Online</span>
+                  </span>
                 )}
               </div>
             </div>

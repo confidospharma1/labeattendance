@@ -11,7 +11,9 @@ export class AppError extends Error {
     this.details = details;
     this.isOperational = true;
 
-    Error.captureStackTrace(this, this.constructor);
+    if (typeof (Error as any).captureStackTrace === 'function') {
+      (Error as any).captureStackTrace(this, this.constructor);
+    }
   }
 }
 
