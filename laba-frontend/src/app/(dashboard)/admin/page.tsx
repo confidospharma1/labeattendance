@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { AddBranchModal } from '@/components/branch/AddBranchModal';
 import { WeeklyScheduleModal } from '@/components/schedule/WeeklyScheduleModal';
+import { AddEmployeeModal } from '@/components/employee/AddEmployeeModal';
 
 interface EmployeeItem {
   id: string;
@@ -60,6 +61,7 @@ export default function AdminDashboard() {
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [isAddBranchOpen, setIsAddBranchOpen] = useState(false);
+  const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
   const [selectedFieldEmployee, setSelectedFieldEmployee] = useState<any | null>(null);
 
   const fetchAdminData = useCallback(async () => {
@@ -381,6 +383,13 @@ export default function AdminDashboard() {
                   Office Staff & Field Staff registered across LABA Andhra Pradesh branches
                 </p>
               </div>
+              <button
+                onClick={() => setIsAddEmployeeOpen(true)}
+                className="flex items-center space-x-1 px-3 py-1.5 bg-[#171717] hover:bg-black text-white rounded text-xs font-medium transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Employee</span>
+              </button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -593,6 +602,13 @@ export default function AdminDashboard() {
           isOpen={Boolean(selectedFieldEmployee)}
           employee={selectedFieldEmployee}
           onClose={() => setSelectedFieldEmployee(null)}
+          onSuccess={fetchAdminData}
+        />
+
+        <AddEmployeeModal
+          isOpen={isAddEmployeeOpen}
+          branches={branches}
+          onClose={() => setIsAddEmployeeOpen(false)}
           onSuccess={fetchAdminData}
         />
       </main>
