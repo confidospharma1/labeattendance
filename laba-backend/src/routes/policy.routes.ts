@@ -14,3 +14,4 @@ router.get('/current', policyController.getCurrentPolicy);
 router.post('/', authorize(['SUPER_ADMIN']), policyController.createPolicy);
 
 export const policyRoutes = router;
+

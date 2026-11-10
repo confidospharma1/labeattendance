@@ -20,10 +20,13 @@ import {
   Loader2,
   Plus,
   Calendar,
+  Sliders,
+  Shield,
 } from 'lucide-react';
 import { AddBranchModal } from '@/components/branch/AddBranchModal';
 import { WeeklyScheduleModal } from '@/components/schedule/WeeklyScheduleModal';
 import { AddEmployeeModal } from '@/components/employee/AddEmployeeModal';
+import { PolicyModal } from '@/components/policy/PolicyModal';
 
 interface EmployeeItem {
   id: string;

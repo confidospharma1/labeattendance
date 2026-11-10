@@ -11,3 +11,4 @@ router.use(authorize(['SUPER_ADMIN']));
 router.get('/', auditController.listAuditLogs);
 
 export const auditRoutes = router;
+
