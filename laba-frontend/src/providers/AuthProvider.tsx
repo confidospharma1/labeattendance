@@ -37,13 +37,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (credentials: any) => {
     const res = await apiClient.post('/auth/login', credentials);
-    setUser(res.data.data.user);
+    const { user: loggedInUser, token } = res.data.data;
+
+    if (token && typeof window !== 'undefined') {
+      localStorage.setItem('laba_token', token);
+    }
+
+    setUser(loggedInUser);
 
     // Redirect based on role
-    const role = res.data.data.user.role;
-    if (role === 'SUPER_ADMIN') {
-      router.push('/admin');
-    } else if (role === 'ADMIN') {
+    const role = loggedInUser.role;
+    if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
       router.push('/admin');
     } else {
       router.push('/employee');
@@ -54,6 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await apiClient.post('/auth/logout');
     } finally {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('laba_token');
+      }
       setUser(null);
       router.push('/login');
     }

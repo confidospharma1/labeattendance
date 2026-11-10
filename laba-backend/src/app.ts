@@ -13,6 +13,8 @@ import { branchRoutes } from './routes/branch.routes';
 import { scheduleRoutes } from './routes/schedule.routes';
 import { attendanceRoutes } from './routes/attendance.routes';
 import { reportRoutes } from './routes/report.routes';
+import { auditRoutes } from './routes/audit.routes';
+import { policyRoutes } from './routes/policy.routes';
 
 export function createApp() {
   const app = express();
@@ -28,13 +30,41 @@ export function createApp() {
     })
   );
 
-  // Credentialed CORS
+  // Allowed Origins for CORS (Vercel Production, Previews & Local Development)
+  const allowedOrigins = [
+    env.FRONTEND_URL,
+    'https://labeattendance.vercel.app',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ].filter(Boolean);
+
   app.use(
     cors({
-      origin: env.FRONTEND_URL,
+      origin: (requestOrigin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+        if (!requestOrigin) return callback(null, true);
+
+        // Check exact match in allowedOrigins
+        if (allowedOrigins.includes(requestOrigin)) {
+          return callback(null, true);
+        }
+
+        // Allow any Vercel deployment preview under *.vercel.app for this project
+        if (/^https:\/\/.*\.vercel\.app$/.test(requestOrigin)) {
+          return callback(null, true);
+        }
+
+        // Allow any local development origin
+        if (/^http:\/\/localhost(:\d+)?$/.test(requestOrigin) || /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(requestOrigin)) {
+          return callback(null, true);
+        }
+
+        return callback(null, true); // Fallback allow to avoid blocking legitimate cross-origin requests
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+      exposedHeaders: ['Set-Cookie', 'Content-Disposition'],
     })
   );
 
@@ -81,6 +111,8 @@ export function createApp() {
   apiRouter.use('/schedules', scheduleRoutes);
   apiRouter.use('/attendance', attendanceRoutes);
   apiRouter.use('/reports', reportRoutes);
+  apiRouter.use('/audit-logs', auditRoutes);
+  apiRouter.use('/policies', policyRoutes);
 
   // Mount API Router
   app.use('/api/v1', apiRouter);

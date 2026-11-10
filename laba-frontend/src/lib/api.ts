@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+const isProduction = process.env.NODE_ENV === 'production';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (isProduction ? 'https://labeattendance.onrender.com/api/v1' : 'http://localhost:5000/api/v1');
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -8,6 +11,16 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+apiClient.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('laba_token');
+    if (token && !config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
 });
 
 apiClient.interceptors.response.use(

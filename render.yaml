@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: laba-attendance-api
+    env: node
+    plan: free
+    rootDir: laba-backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DEFAULT_TIMEZONE
+        value: Asia/Kolkata
+      - key: DEFAULT_GEOFENCE_RADIUS_METRES
+        value: 100
+      - key: COOKIE_SECURE
+        value: true
+      - key: COOKIE_SAME_SITE
+        value: none
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
