@@ -1,0 +1,375 @@
+// prisma/schema.prisma
+// LABA Attendance Management System Database Schema
+// Target Database: Neon PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  OFFICE_STAFF
+  FIELD_STAFF
+}
+
+enum EmployeeType {
+  OFFICE_STAFF
+  FIELD_STAFF
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+// Master instruction correction R-1: Explicit Schedule states
+enum ScheduleType {
+  LOCATION_ASSIGNED    // Enforce configured geofence
+  UNASSIGNED           // Explicitly permit attendance from any location under policy (record actual GPS)
+  WEEKLY_OFF           // Block attendance with weekly off notification
+  ATTENDANCE_DISABLED  // Explicitly disable attendance
+}
+
+enum AttendanceStatus {
+  CHECKED_IN
+  CHECKED_OUT
+  ABSENT
+  CORRECTED
+  PENDING_CORRECTION
+}
+
+enum LocationRefType {
+  BRANCH
+  FIELD_SCHEDULE
+  UNRESTRICTED
+}
+
+enum CorrectionType {
+  MISSED_CHECKIN
+  MISSED_CHECKOUT
+  WRONG_LOCATION
+  OTHER
+}
+
+enum CorrectionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// ─── MODELS ───────────────────────────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(255)
+  slug      String   @unique @db.VarChar(100)
+  timezone  String   @default("Asia/Kolkata") @db.VarChar(50)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  users                  User[]
+  branches               Branch[]
+  employees              Employee[]
+  attendancePolicies     AttendancePolicy[]
+  attendanceRecords      AttendanceRecord[]
+  holidays               Holiday[]
+  attendanceCorrections  AttendanceCorrection[]
+  auditLogs              AuditLog[]
+
+  @@map("organizations")
+}
+
+model User {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId      String    @map("organization_id") @db.Uuid
+  email               String    @unique @db.VarChar(255)
+  passwordHash        String    @map("password_hash") @db.VarChar(255)
+  role                UserRole
+  isActive            Boolean   @default(true) @map("is_active")
+  lastLoginAt         DateTime? @map("last_login_at") @db.Timestamptz
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until") @db.Timestamptz
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz
+
+  organization             Organization          @relation(fields: [organizationId], references: [id])
+  employee                 Employee?
+  createdBranchAssignments BranchAssignment[]     @relation("AssignedBy")
+  createdSchedules         FieldStaffSchedule[]   @relation("ScheduleAssignedBy")
+  createdPolicies          AttendancePolicy[]     @relation("PolicyCreatedBy")
+  reviewedCorrections      AttendanceCorrection[] @relation("ReviewedBy")
+  requestedCorrections     AttendanceCorrection[] @relation("RequestedBy")
+  auditLogs                AuditLog[]
+  createdEmployees         Employee[]             @relation("CreatedBy")
+  createdBranches          Branch[]
+
+  @@index([email])
+  @@index([organizationId])
+  @@map("users")
+}
+
+model Employee {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String         @unique @map("user_id") @db.Uuid
+  organizationId String         @map("organization_id") @db.Uuid
+  employeeCode   String         @unique @map("employee_code") @db.VarChar(20)
+  contactId      String?        @map("contact_id") @db.VarChar(50)
+  fullName       String         @map("full_name") @db.VarChar(255)
+  mobile         String         @db.VarChar(15)
+  employeeType   EmployeeType   @map("employee_type")
+  status         EmployeeStatus @default(ACTIVE)
+  profileNotes   String?        @map("profile_notes") @db.Text
+  createdById    String         @map("created_by") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt      DateTime?      @map("deleted_at") @db.Timestamptz
+
+  user                  User                   @relation(fields: [userId], references: [id])
+  organization          Organization           @relation(fields: [organizationId], references: [id])
+  createdBy             User                   @relation("CreatedBy", fields: [createdById], references: [id])
+  branchAssignments     BranchAssignment[]
+  fieldSchedules        FieldStaffSchedule[]
+  attendanceRecords     AttendanceRecord[]
+  attendanceCorrections AttendanceCorrection[]
+  managedBranches       Branch[]               @relation("BranchManager")
+
+  @@index([organizationId])
+  @@index([employeeCode])
+  @@index([employeeType])
+  @@index([status])
+  @@map("employees")
+}
+
+model Branch {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String   @map("organization_id") @db.Uuid
+  branchCode           String   @unique @map("branch_code") @db.VarChar(20)
+  name                 String   @db.VarChar(255)
+  address              String   @db.Text
+  district             String   @db.VarChar(100)
+  state                String   @default("Andhra Pradesh") @db.VarChar(100)
+  latitude             Decimal  @db.Decimal(10, 7)
+  longitude            Decimal  @db.Decimal(10, 7)
+  geofenceRadiusMetres Int      @default(100) @map("geofence_radius_metres")
+  managerEmployeeId    String?  @map("manager_employee_id") @db.Uuid
+  isActive             Boolean  @default(true) @map("is_active")
+  createdById          String   @map("created_by") @db.Uuid
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization       @relation(fields: [organizationId], references: [id])
+  createdBy    User               @relation(fields: [createdById], references: [id])
+  manager      Employee?          @relation("BranchManager", fields: [managerEmployeeId], references: [id])
+  assignments  BranchAssignment[]
+
+  @@index([organizationId])
+  @@index([branchCode])
+  @@map("branches")
+}
+
+model BranchAssignment {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeId    String    @map("employee_id") @db.Uuid
+  branchId      String    @map("branch_id") @db.Uuid
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+  isCurrent     Boolean   @default(true) @map("is_current")
+  assignedById  String    @map("assigned_by") @db.Uuid
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  branch     Branch   @relation(fields: [branchId], references: [id])
+  assignedBy User     @relation("AssignedBy", fields: [assignedById], references: [id])
+
+  @@index([employeeId, isCurrent])
+  @@index([branchId])
+  @@map("branch_assignments")
+}
+
+model FieldStaffSchedule {
+  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeId           String       @map("employee_id") @db.Uuid
+  scheduleDate         DateTime     @map("schedule_date") @db.Date
+  scheduleType         ScheduleType @map("schedule_type")
+  locationName         String?      @map("location_name") @db.VarChar(255)
+  address              String?      @db.Text
+  latitude             Decimal?     @db.Decimal(10, 7)
+  longitude            Decimal?     @db.Decimal(10, 7)
+  geofenceRadiusMetres Int?         @map("geofence_radius_metres")
+  attendanceEnabled    Boolean      @default(true) @map("attendance_enabled")
+  notes                String?      @db.Text
+  assignedById         String       @map("assigned_by") @db.Uuid
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  assignedBy User     @relation("ScheduleAssignedBy", fields: [assignedById], references: [id])
+
+  @@unique([employeeId, scheduleDate])
+  @@index([employeeId, scheduleDate])
+  @@map("field_staff_schedules")
+}
+
+model AttendancePolicy {
+  id                            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId                String   @map("organization_id") @db.Uuid
+  version                       Int
+  isCurrent                     Boolean  @default(true) @map("is_current")
+  morningStart                  String   @map("morning_start") @db.VarChar(5) // Format HH:MM e.g. "09:00"
+  morningEnd                    String   @map("morning_end") @db.VarChar(5)   // Format HH:MM e.g. "09:20"
+  eveningStart                  String   @map("evening_start") @db.VarChar(5) // Format HH:MM e.g. "16:30"
+  eveningEnd                    String   @map("evening_end") @db.VarChar(5)   // Format HH:MM e.g. "17:00"
+  defaultGeofenceRadiusMetres   Int      @default(100) @map("default_geofence_radius_metres")
+  minReportLength               Int      @default(5) @map("min_report_length")
+  maxReportLength               Int      @default(500) @map("max_report_length")
+  gpsAccuracyWarnMetres         Int      @default(100) @map("gps_accuracy_warn_metres")
+  gpsAccuracyRejectMetres       Int      @default(200) @map("gps_accuracy_reject_metres")
+  allowUnrestrictedFieldCheckin Boolean  @default(true) @map("allow_unrestricted_field_checkin")
+  timezone                      String   @default("Asia/Kolkata") @db.VarChar(50)
+  effectiveFrom                 DateTime @map("effective_from") @db.Date
+  notes                         String?  @db.Text
+  createdById                   String   @map("created_by") @db.Uuid
+  createdAt                     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization      Organization       @relation(fields: [organizationId], references: [id])
+  createdBy         User               @relation("PolicyCreatedBy", fields: [createdById], references: [id])
+  attendanceRecords AttendanceRecord[]
+
+  @@unique([organizationId, version])
+  @@index([organizationId, isCurrent])
+  @@map("attendance_policies")
+}
+
+model AttendanceRecord {
+  id                     String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeId             String           @map("employee_id") @db.Uuid
+  organizationId         String           @map("organization_id") @db.Uuid
+  workDate               DateTime         @map("work_date") @db.Date
+  policyVersionId        String           @map("policy_version_id") @db.Uuid
+  status                 AttendanceStatus @default(CHECKED_IN)
+  
+  // Check-In Details
+  checkInAt              DateTime?        @map("check_in_at") @db.Timestamptz
+  checkInLat             Decimal?         @map("check_in_lat") @db.Decimal(10, 7)
+  checkInLng             Decimal?         @map("check_in_lng") @db.Decimal(10, 7)
+  checkInAccuracyMetres  Decimal?         @map("check_in_accuracy_metres") @db.Decimal(8, 2)
+  checkInGeofenceValid   Boolean?         @map("check_in_geofence_valid")
+  checkInDistanceMetres  Decimal?         @map("check_in_distance_metres") @db.Decimal(10, 2)
+  checkInLocationRefId   String?          @map("check_in_location_ref_id") @db.Uuid
+  checkInLocationRefType LocationRefType? @map("check_in_location_ref_type")
+  checkInLocationName    String?          @map("check_in_location_name") @db.VarChar(255)
+
+  // Check-Out Details (Master instruction correction R-3: Dual snapshot preservation)
+  checkOutAt              DateTime?        @map("check_out_at") @db.Timestamptz
+  checkOutLat             Decimal?         @map("check_out_lat") @db.Decimal(10, 7)
+  checkOutLng             Decimal?         @map("check_out_lng") @db.Decimal(10, 7)
+  checkOutAccuracyMetres  Decimal?         @map("check_out_accuracy_metres") @db.Decimal(8, 2)
+  checkOutGeofenceValid   Boolean?         @map("check_out_geofence_valid")
+  checkOutDistanceMetres  Decimal?         @map("check_out_distance_metres") @db.Decimal(10, 2)
+  checkOutLocationRefId   String?          @map("check_out_location_ref_id") @db.Uuid
+  checkOutLocationRefType LocationRefType? @map("check_out_location_ref_type")
+  checkOutLocationName    String?          @map("check_out_location_name") @db.VarChar(255)
+
+  // Work Report & Admin Flags
+  workReport             String?          @map("work_report") @db.Text
+  isCorrected            Boolean          @default(false) @map("is_corrected")
+  isAdminCreated         Boolean          @default(false) @map("is_admin_created")
+  createdAt              DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  employee              Employee               @relation(fields: [employeeId], references: [id])
+  organization          Organization           @relation(fields: [organizationId], references: [id])
+  policyVersion         AttendancePolicy       @relation(fields: [policyVersionId], references: [id])
+  corrections           AttendanceCorrection[]
+
+  @@unique([employeeId, workDate])
+  @@index([organizationId, workDate])
+  @@index([employeeId, workDate])
+  @@index([status])
+  @@map("attendance_records")
+}
+
+model AttendanceCorrection {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  attendanceRecordId String?          @map("attendance_record_id") @db.Uuid
+  employeeId         String           @map("employee_id") @db.Uuid
+  organizationId     String           @map("organization_id") @db.Uuid
+  correctionType     CorrectionType   @map("correction_type")
+  status             CorrectionStatus @default(PENDING)
+  employeeReason     String           @map("employee_reason") @db.Text
+  adminReason        String?          @map("admin_reason") @db.Text
+  originalState      Json?            @map("original_state")
+  correctedState     Json?            @map("corrected_state")
+  requestedById      String           @map("requested_by") @db.Uuid
+  reviewedById       String?          @map("reviewed_by") @db.Uuid
+  requestedAt        DateTime         @default(now()) @map("requested_at") @db.Timestamptz
+  reviewedAt         DateTime?        @map("reviewed_at") @db.Timestamptz
+
+  attendanceRecord AttendanceRecord? @relation(fields: [attendanceRecordId], references: [id])
+  employee         Employee          @relation(fields: [employeeId], references: [id])
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  requestedBy      User              @relation("RequestedBy", fields: [requestedById], references: [id])
+  reviewedBy       User?             @relation("ReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([organizationId, status])
+  @@index([employeeId])
+  @@map("attendance_corrections")
+}
+
+model AuditLog {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  actorId        String   @map("actor_id") @db.Uuid
+  actorRole      String   @map("actor_role") @db.VarChar(50)
+  action         String   @db.VarChar(100)
+  entityType     String   @map("entity_type") @db.VarChar(100)
+  entityId       String?  @map("entity_id") @db.Uuid
+  beforeState    Json?    @map("before_state")
+  afterState     Json?    @map("after_state")
+  ipAddress      String?  @map("ip_address") @db.VarChar(45)
+  userAgent      String?  @map("user_agent") @db.Text
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  actor        User         @relation(fields: [actorId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+model Holiday {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  holidayDate    DateTime @map("holiday_date") @db.Date
+  name           String   @db.VarChar(255)
+  description    String?  @db.Text
+  isActive       Boolean  @default(true) @map("is_active")
+  createdById    String   @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, holidayDate])
+  @@index([organizationId, holidayDate])
+  @@map("holidays")
+}
+
