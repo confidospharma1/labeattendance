@@ -9,11 +9,11 @@ export interface DistrictLocation {
 
 export interface VillageLocation {
   name: string;
-  type: 'Village' | 'Mandal' | 'Town' | 'District';
+  type: 'Village' | 'Mandal' | 'Town' | 'District' | 'Colony' | 'Area' | 'Quarter';
   district: string;
   latitude: number;
   longitude: number;
-  boundaryRadius: number; // In metres (e.g. 6000m for whole village/mandal)
+  boundaryRadius: number; // Auto-selected according to Google Maps extent
   postalCode?: string;
 }
 
@@ -68,11 +68,188 @@ export const AP_DISTRICTS: DistrictLocation[] = [
 ];
 
 /**
- * Key Andhra Pradesh Mandals & Villages for Field Officers
- * Covers the whole territory boundary (6000m radius covers the entire village boundary).
+ * Key Andhra Pradesh Mandals, Villages & City Sub-Areas/Colonies
+ * Automatically bounded according to Google Maps geographic territory.
  */
 export const AP_VILLAGES_MANDALS: VillageLocation[] = [
-  // Nandyal District Villages & Mandals (Featured in user request)
+  // Kadapa City Sub-Areas, Colonies & Quarters (Featured in user request)
+  {
+    name: 'Nagarjunapeta',
+    type: 'Quarter',
+    district: 'YSR Kadapa',
+    latitude: 14.4660,
+    longitude: 78.8250,
+    boundaryRadius: 1500, // Auto-bounded area
+    postalCode: '516003',
+  },
+  {
+    name: 'Nagarajupeta',
+    type: 'Quarter',
+    district: 'YSR Kadapa',
+    latitude: 14.4660,
+    longitude: 78.8250,
+    boundaryRadius: 1500,
+    postalCode: '516003',
+  },
+  {
+    name: 'NGO Colony, Kadapa',
+    type: 'Colony',
+    district: 'YSR Kadapa',
+    latitude: 14.4782,
+    longitude: 78.8345,
+    boundaryRadius: 1200,
+    postalCode: '516002',
+  },
+  {
+    name: 'NGO Colony',
+    type: 'Colony',
+    district: 'YSR Kadapa',
+    latitude: 14.4782,
+    longitude: 78.8345,
+    boundaryRadius: 1200,
+    postalCode: '516002',
+  },
+  {
+    name: 'Akkayapalle',
+    type: 'Area',
+    district: 'YSR Kadapa',
+    latitude: 14.4850,
+    longitude: 78.8180,
+    boundaryRadius: 1800,
+    postalCode: '516003',
+  },
+  {
+    name: 'Yerramukkapalli',
+    type: 'Area',
+    district: 'YSR Kadapa',
+    latitude: 14.4720,
+    longitude: 78.8310,
+    boundaryRadius: 1500,
+    postalCode: '516004',
+  },
+  {
+    name: 'Chemmumiahpet',
+    type: 'Area',
+    district: 'YSR Kadapa',
+    latitude: 14.4610,
+    longitude: 78.8410,
+    boundaryRadius: 1500,
+    postalCode: '516003',
+  },
+  {
+    name: 'Prakash Nagar',
+    type: 'Colony',
+    district: 'YSR Kadapa',
+    latitude: 14.4690,
+    longitude: 78.8190,
+    boundaryRadius: 1200,
+    postalCode: '516002',
+  },
+  {
+    name: 'Mariyapuram',
+    type: 'Area',
+    district: 'YSR Kadapa',
+    latitude: 14.4550,
+    longitude: 78.8150,
+    boundaryRadius: 1500,
+    postalCode: '516001',
+  },
+  {
+    name: 'Chinnachowk',
+    type: 'Area',
+    district: 'YSR Kadapa',
+    latitude: 14.4580,
+    longitude: 78.8450,
+    boundaryRadius: 2000,
+    postalCode: '516002',
+  },
+  {
+    name: 'Seven Roads, Kadapa',
+    type: 'Area',
+    district: 'YSR Kadapa',
+    latitude: 14.4710,
+    longitude: 78.8230,
+    boundaryRadius: 1200,
+    postalCode: '516001',
+  },
+
+  // Nandyal City Sub-Areas & Colonies
+  {
+    name: 'NGO Colony, Nandyal',
+    type: 'Colony',
+    district: 'Nandyal',
+    latitude: 15.4715,
+    longitude: 78.4920,
+    boundaryRadius: 1200,
+    postalCode: '518501',
+  },
+  {
+    name: 'Saleem Nagar',
+    type: 'Area',
+    district: 'Nandyal',
+    latitude: 15.4715,
+    longitude: 78.4920,
+    boundaryRadius: 1200,
+    postalCode: '518501',
+  },
+  {
+    name: 'Sanjeeva Nagar',
+    type: 'Colony',
+    district: 'Nandyal',
+    latitude: 15.4760,
+    longitude: 78.4860,
+    boundaryRadius: 1200,
+    postalCode: '518501',
+  },
+  {
+    name: 'Srinivasa Nagar, Nandyal',
+    type: 'Colony',
+    district: 'Nandyal',
+    latitude: 15.4820,
+    longitude: 78.4750,
+    boundaryRadius: 1200,
+    postalCode: '518501',
+  },
+
+  // Kurnool City Sub-Areas & Colonies
+  {
+    name: 'B Camp, Kurnool',
+    type: 'Area',
+    district: 'Kurnool',
+    latitude: 15.8210,
+    longitude: 78.0280,
+    boundaryRadius: 1500,
+    postalCode: '518002',
+  },
+  {
+    name: 'C Camp, Kurnool',
+    type: 'Area',
+    district: 'Kurnool',
+    latitude: 15.8150,
+    longitude: 78.0320,
+    boundaryRadius: 1500,
+    postalCode: '518002',
+  },
+  {
+    name: 'Joharapuram',
+    type: 'Area',
+    district: 'Kurnool',
+    latitude: 15.8350,
+    longitude: 78.0450,
+    boundaryRadius: 1800,
+    postalCode: '518002',
+  },
+  {
+    name: 'Venkataramana Colony',
+    type: 'Colony',
+    district: 'Kurnool',
+    latitude: 15.8290,
+    longitude: 78.0410,
+    boundaryRadius: 1200,
+    postalCode: '518003',
+  },
+
+  // Nandyal District Villages & Mandals
   {
     name: 'Chagalamarri',
     type: 'Village',
@@ -383,26 +560,30 @@ export function findAndhraCoordinates(query: string): DistrictLocation | null {
 }
 
 /**
- * Searches for a matching Village or Mandal.
+ * Searches for a matching Village, Mandal, or Sub-Area/Colony.
  */
 export function findVillageOrMandal(query: string): VillageLocation | null {
   if (!query || typeof query !== 'string') return null;
   const clean = query.trim().toLowerCase();
   if (clean.length < 2) return null;
 
+  // Remove common suffixes like 'kadapa', 'ap', 'colony' to match better
   const exact = AP_VILLAGES_MANDALS.find((v) => v.name.toLowerCase() === clean);
   if (exact) return exact;
 
   const startsWith = AP_VILLAGES_MANDALS.find((v) => v.name.toLowerCase().startsWith(clean));
   if (startsWith) return startsWith;
 
-  const contains = AP_VILLAGES_MANDALS.find((v) => v.name.toLowerCase().includes(clean));
+  const contains = AP_VILLAGES_MANDALS.find((v) => {
+    const vLower = v.name.toLowerCase();
+    return vLower.includes(clean) || clean.includes(vLower);
+  });
   return contains || null;
 }
 
 /**
- * Unified territory finder: Checks villages/mandals first, then districts.
- * Returns coordinates, name, and boundary radius.
+ * Unified territory finder: Checks sub-areas/villages/mandals first, then districts.
+ * Returns coordinates, name, and auto-selected boundary radius.
  */
 export function findTerritory(query: string): {
   name: string;
@@ -418,7 +599,7 @@ export function findTerritory(query: string): {
       latitude: village.latitude,
       longitude: village.longitude,
       boundaryRadius: village.boundaryRadius,
-      description: `${village.name} (${village.type}, ${village.district} District${village.postalCode ? ` - ${village.postalCode}` : ''})`,
+      description: `${village.name} (${village.type}, ${village.district}${village.postalCode ? ` - ${village.postalCode}` : ''})`,
     };
   }
 

@@ -164,7 +164,7 @@ export class GeofenceService {
     if (!result.insideGeofence) {
       if (enforcement.type === LocationRefType.FIELD_SCHEDULE) {
         throw new AppError(
-          `Location Mismatch: You are outside the authorized village boundary of "${enforcement.refName}". You are ${Math.round(result.distanceMetres / 1000)}km away. Attendance can only be recorded from inside the ${enforcement.refName} village/mandal territory.`,
+          `Location Mismatch: You are outside the authorized boundary of "${enforcement.refName}". Attendance can only be recorded from inside the ${enforcement.refName} territory boundary.`,
           400,
           'FIELD_LOCATION_MISMATCH'
         );

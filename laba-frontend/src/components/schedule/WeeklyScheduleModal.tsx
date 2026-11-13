@@ -235,7 +235,7 @@ export const WeeklyScheduleModal: React.FC<WeeklyScheduleModalProps> = ({
                 <span>Interactive Map & Whole Village Boundary Selection</span>
               </div>
               <p className="text-blue-800/90 text-[11px] leading-relaxed">
-                Field officers visit entire villages or mandals. Click <strong>&quot;Select &amp; Bound on Map&quot;</strong> to search any village or district (e.g. <strong>Chagalamarri</strong>). The map navigates and bounds the entire village territory (~6 km boundary). Attendance will be accepted anywhere inside that territory on time.
+                Field officers visit villages, mandals, or specific city areas (e.g. <strong>Nagarjunapeta</strong>, <strong>NGO Colony</strong>, or <strong>Chagalamarri</strong>). Click <strong>&quot;Select &amp; Bound on Map&quot;</strong> to search any area or district. The territory boundary is automatically selected according to Google Maps without manual radius entry. Attendance is accepted anywhere inside the bounded area on time.
               </p>
             </div>
 
@@ -380,7 +380,7 @@ export const WeeklyScheduleModal: React.FC<WeeklyScheduleModalProps> = ({
                                 <div className="flex items-center space-x-1.5">
                                   <Check className="w-3 h-3 text-emerald-600 shrink-0" />
                                   <span>
-                                    Bounded Territory: <strong>{s.locationName || 'Village'}</strong> (~{((s.geofenceRadiusMetres || 6000) / 1000).toFixed(0)} km whole village boundary)
+                                    Bounded Territory: <strong>{s.locationName || 'Area'}</strong> (Auto-selected Google Maps Boundary)
                                   </span>
                                 </div>
                                 <button

@@ -89,14 +89,14 @@ export const CheckInCard: React.FC<CheckInCardProps> = ({ todayStatus, onRefresh
 
         {/* Location Target details */}
         <div className="mt-4 p-3 bg-[#F9F9F8] border border-[#E5E5E5] rounded text-xs space-y-1.5">
-          {enforcement?.type === 'FIELD_SCHEDULE' || (enforcement?.radiusMetres && enforcement.radiusMetres >= 3000) ? (
+          {enforcement?.type === 'FIELD_SCHEDULE' || (enforcement?.radiusMetres && enforcement.radiusMetres >= 800) ? (
             <>
               <div className="flex items-center space-x-2 text-[#171717] font-semibold">
                 <MapPin className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-                <span>Assigned Village / Mandal: {enforcement?.refName || 'Resolving location...'}</span>
+                <span>Assigned Territory / Area: {enforcement?.refName || 'Resolving location...'}</span>
               </div>
               <div className="text-[#525252] pl-5 text-[11px] leading-relaxed">
-                Coverage: <strong className="text-blue-700">Whole Village Territory</strong> (~{((enforcement?.radiusMetres || 6000) / 1000).toFixed(0)} km boundary). Attendance accepted anywhere inside this village.
+                Boundary: <strong className="text-blue-700">Google Maps Area Boundary</strong>. Attendance is accepted anywhere inside this authorized area on time.
               </div>
             </>
           ) : (

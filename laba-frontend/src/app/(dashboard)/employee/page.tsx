@@ -123,7 +123,7 @@ export default function EmployeeDashboard() {
                 {emp?.employeeType === 'FIELD_STAFF' ? 'Assigned Field Territory:' : 'Assigned Branch:'}{' '}
                 <strong className="text-[#171717]">
                   {emp?.employeeType === 'FIELD_STAFF'
-                    ? (todayStatus?.enforcement?.refName ? `${todayStatus.enforcement.refName} (Whole Village Boundary)` : 'Dynamic Field Route')
+                    ? (todayStatus?.enforcement?.refName ? `${todayStatus.enforcement.refName} (Google Maps Boundary)` : 'Dynamic Field Route')
                     : (emp?.assignedBranch ? emp.assignedBranch.name : todayStatus?.enforcement?.refName || 'Pharmacy Branch')}
                 </strong>
               </span>

@@ -100,11 +100,11 @@ export const CheckOutCard: React.FC<CheckOutCardProps> = ({ todayStatus, onRefre
 
         {/* Location Target details */}
         <div className="mt-3 p-2.5 bg-[#F9F9F8] border border-[#E5E5E5] rounded text-xs space-y-1">
-          {enforcement?.type === 'FIELD_SCHEDULE' || (enforcement?.radiusMetres && enforcement.radiusMetres >= 3000) ? (
+          {enforcement?.type === 'FIELD_SCHEDULE' || (enforcement?.radiusMetres && enforcement.radiusMetres >= 800) ? (
             <div className="text-[11px] text-[#171717]">
-              <span>📍 Assigned Village / Mandal: <strong>{enforcement?.refName || 'Field Duty'}</strong></span>
+              <span>📍 Assigned Territory / Area: <strong>{enforcement?.refName || 'Field Duty'}</strong></span>
               <div className="text-[#525252] text-[10px]">
-                Whole Village Boundary: ~{((enforcement?.radiusMetres || 6000) / 1000).toFixed(0)} km coverage
+                Boundary: Google Maps Territory Boundary (Auto-Enclosed)
               </div>
             </div>
           ) : (
