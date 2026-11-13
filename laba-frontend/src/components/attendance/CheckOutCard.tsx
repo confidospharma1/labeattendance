@@ -18,6 +18,7 @@ export const CheckOutCard: React.FC<CheckOutCardProps> = ({ todayStatus, onRefre
   const policy = todayStatus?.policy;
   const windows = todayStatus?.windows;
   const record = todayStatus?.todayRecord;
+  const enforcement = todayStatus?.enforcement;
 
   const isCheckedIn = Boolean(record?.checkInAt);
   const isCheckedOut = Boolean(record?.checkOutAt);
@@ -94,6 +95,25 @@ export const CheckOutCard: React.FC<CheckOutCardProps> = ({ todayStatus, onRefre
               <Clock className="w-3.5 h-3.5" />
               <span>Window Closed</span>
             </span>
+          )}
+        </div>
+
+        {/* Location Target details */}
+        <div className="mt-3 p-2.5 bg-[#F9F9F8] border border-[#E5E5E5] rounded text-xs space-y-1">
+          {enforcement?.type === 'FIELD_SCHEDULE' || (enforcement?.radiusMetres && enforcement.radiusMetres >= 3000) ? (
+            <div className="text-[11px] text-[#171717]">
+              <span>📍 Assigned Village / Mandal: <strong>{enforcement?.refName || 'Field Duty'}</strong></span>
+              <div className="text-[#525252] text-[10px]">
+                Whole Village Boundary: ~{((enforcement?.radiusMetres || 6000) / 1000).toFixed(0)} km coverage
+              </div>
+            </div>
+          ) : (
+            <div className="text-[11px] text-[#171717]">
+              <span>📍 Target: <strong>{enforcement?.refName || 'Resolving location...'}</strong></span>
+              {enforcement?.radiusMetres && (
+                <span className="text-[#737373] text-[10px] ml-2">({enforcement.radiusMetres}m radius)</span>
+              )}
+            </div>
           )}
         </div>
 

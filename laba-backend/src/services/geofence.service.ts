@@ -112,10 +112,10 @@ export class GeofenceService {
         return {
           type: LocationRefType.FIELD_SCHEDULE,
           refId: schedule.id,
-          refName: schedule.locationName || 'Field Assigned Duty Location',
+          refName: schedule.locationName || 'Field Assigned Village / Mandal',
           targetLat: Number(schedule.latitude),
           targetLng: Number(schedule.longitude),
-          radiusMetres: schedule.geofenceRadiusMetres || 100,
+          radiusMetres: schedule.geofenceRadiusMetres || 6000,
           unrestricted: false,
         };
       }
@@ -162,6 +162,14 @@ export class GeofenceService {
     );
 
     if (!result.insideGeofence) {
+      if (enforcement.type === LocationRefType.FIELD_SCHEDULE) {
+        throw new AppError(
+          `Location Mismatch: You are outside the authorized village boundary of "${enforcement.refName}". You are ${Math.round(result.distanceMetres / 1000)}km away. Attendance can only be recorded from inside the ${enforcement.refName} village/mandal territory.`,
+          400,
+          'FIELD_LOCATION_MISMATCH'
+        );
+      }
+
       throw new AppError(
         `You are outside your authorized geofence at "${enforcement.refName}". Distance: ${Math.round(result.distanceMetres)}m, Allowed: ${result.radiusMetres}m (exceeded by ${Math.round(result.distanceMetres - result.radiusMetres)}m).`,
         400,

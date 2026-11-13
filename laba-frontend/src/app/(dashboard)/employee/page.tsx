@@ -120,9 +120,11 @@ export default function EmployeeDashboard() {
             <div className="flex items-center space-x-2 text-[#737373]">
               <Building2 className="w-4 h-4 flex-shrink-0" />
               <span>
-                Assigned Branch:{' '}
+                {emp?.employeeType === 'FIELD_STAFF' ? 'Assigned Field Territory:' : 'Assigned Branch:'}{' '}
                 <strong className="text-[#171717]">
-                  {emp?.assignedBranch ? emp.assignedBranch.name : todayStatus?.enforcement?.refName || 'Dynamic / Field Duty'}
+                  {emp?.employeeType === 'FIELD_STAFF'
+                    ? (todayStatus?.enforcement?.refName ? `${todayStatus.enforcement.refName} (Whole Village Boundary)` : 'Dynamic Field Route')
+                    : (emp?.assignedBranch ? emp.assignedBranch.name : todayStatus?.enforcement?.refName || 'Pharmacy Branch')}
                 </strong>
               </span>
             </div>

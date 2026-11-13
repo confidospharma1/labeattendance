@@ -744,10 +744,11 @@ export default function AdminDashboard() {
                         {emp.employeeType === 'FIELD_STAFF' && (
                           <button
                             onClick={() => setSelectedFieldEmployee(emp)}
-                            className="flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold bg-[#F0EFEB] hover:bg-[#E5E5E5] text-[#171717] rounded-lg transition-colors"
+                            className="flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg transition-colors"
+                            title="6-Day Village / Territory Route"
                           >
                             <Calendar className="w-3 h-3" />
-                            <span>Schedule</span>
+                            <span>6-Day Route</span>
                           </button>
                         )}
                         <button
@@ -837,11 +838,11 @@ export default function AdminDashboard() {
                               {emp.employeeType === 'FIELD_STAFF' && (
                                 <button
                                   onClick={() => setSelectedFieldEmployee(emp)}
-                                  className="inline-flex items-center space-x-1 px-2 py-1 text-[11px] font-medium bg-[#F0EFEB] hover:bg-[#E5E5E5] text-[#171717] rounded transition-colors mr-1"
-                                  title="7-Day Schedule"
+                                  className="inline-flex items-center space-x-1 px-2.5 py-1 text-[11px] font-semibold bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded transition-colors mr-1"
+                                  title="6-Day Field Route & Village Assignment"
                                 >
                                   <Calendar className="w-3 h-3" />
-                                  <span className="hidden sm:inline">Schedule</span>
+                                  <span>6-Day Route</span>
                                 </button>
                               )}
                               <button

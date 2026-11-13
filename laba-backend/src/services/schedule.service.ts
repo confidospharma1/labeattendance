@@ -48,7 +48,7 @@ export class ScheduleService {
         address: input.address || null,
         latitude: input.latitude !== undefined ? new Prisma.Decimal(input.latitude) : null,
         longitude: input.longitude !== undefined ? new Prisma.Decimal(input.longitude) : null,
-        geofenceRadiusMetres: input.geofenceRadiusMetres || 100,
+        geofenceRadiusMetres: input.geofenceRadiusMetres || 6000,
         attendanceEnabled: input.attendanceEnabled ?? true,
         notes: input.notes || null,
         assignedById: assignerUserId,
@@ -59,7 +59,7 @@ export class ScheduleService {
         address: input.address || null,
         latitude: input.latitude !== undefined ? new Prisma.Decimal(input.latitude) : null,
         longitude: input.longitude !== undefined ? new Prisma.Decimal(input.longitude) : null,
-        geofenceRadiusMetres: input.geofenceRadiusMetres || 100,
+        geofenceRadiusMetres: input.geofenceRadiusMetres || 6000,
         attendanceEnabled: input.attendanceEnabled ?? true,
         notes: input.notes || null,
         assignedById: assignerUserId,
@@ -114,7 +114,8 @@ export class ScheduleService {
       const results = [];
 
       for (const item of input.schedules) {
-        const currentDate = addDays(startDate, item.dayOffset);
+        const offset = item.dayOffset !== undefined ? item.dayOffset : (item as any).dayOfWeek || 0;
+        const currentDate = addDays(startDate, offset);
 
         const record = await tx.fieldStaffSchedule.upsert({
           where: {
@@ -131,7 +132,7 @@ export class ScheduleService {
             address: item.address || null,
             latitude: item.latitude !== undefined ? new Prisma.Decimal(item.latitude) : null,
             longitude: item.longitude !== undefined ? new Prisma.Decimal(item.longitude) : null,
-            geofenceRadiusMetres: item.geofenceRadiusMetres || 100,
+            geofenceRadiusMetres: item.geofenceRadiusMetres || 6000,
             attendanceEnabled: item.attendanceEnabled ?? true,
             notes: item.notes || null,
             assignedById: assignerUserId,
@@ -142,7 +143,7 @@ export class ScheduleService {
             address: item.address || null,
             latitude: item.latitude !== undefined ? new Prisma.Decimal(item.latitude) : null,
             longitude: item.longitude !== undefined ? new Prisma.Decimal(item.longitude) : null,
-            geofenceRadiusMetres: item.geofenceRadiusMetres || 100,
+            geofenceRadiusMetres: item.geofenceRadiusMetres || 6000,
             attendanceEnabled: item.attendanceEnabled ?? true,
             notes: item.notes || null,
             assignedById: assignerUserId,
