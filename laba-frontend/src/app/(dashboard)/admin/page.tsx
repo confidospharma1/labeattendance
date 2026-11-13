@@ -308,53 +308,53 @@ export default function AdminDashboard() {
       </header>
 
       {/* Main Admin Content */}
-      <main className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      <main className="max-w-7xl mx-auto p-3 sm:p-6 space-y-5 sm:space-y-6">
         {/* Metric Cards Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-          <div className="bg-white border border-[#E5E5E5] rounded-xl p-4 shadow-xs">
-            <div className="flex items-center space-x-2 text-xs text-[#737373] mb-1">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <div className="bg-white border border-[#E5E5E5] rounded-xl p-3 sm:p-4 shadow-xs">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 text-[11px] sm:text-xs text-[#737373] mb-1">
               <Users className="w-3.5 h-3.5" />
               <span>Total Active Staff</span>
             </div>
-            <div className="text-2xl font-bold text-[#171717]">
+            <div className="text-xl sm:text-2xl font-bold text-[#171717]">
               {summary ? summary.totalActiveEmployees : employees.length}
             </div>
-            <div className="text-[11px] text-[#737373] mt-1">Across Andhra Pradesh Branches</div>
+            <div className="text-[10px] sm:text-[11px] text-[#737373] mt-1 truncate">Across AP Branches</div>
           </div>
 
-          <div className="bg-white border border-[#E5E5E5] rounded-xl p-4 shadow-xs">
-            <div className="flex items-center space-x-2 text-xs text-[#737373] mb-1">
+          <div className="bg-white border border-[#E5E5E5] rounded-xl p-3 sm:p-4 shadow-xs">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 text-[11px] sm:text-xs text-[#737373] mb-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
               <span>Present Today</span>
             </div>
-            <div className="text-2xl font-bold text-emerald-700">
+            <div className="text-xl sm:text-2xl font-bold text-emerald-700">
               {summary ? summary.presentCount : '0'}
             </div>
-            <div className="text-[11px] text-[#737373] mt-1">
+            <div className="text-[10px] sm:text-[11px] text-[#737373] mt-1 truncate">
               {summary ? `${summary.checkedOutCount} checked out` : 'Waiting for check-ins'}
             </div>
           </div>
 
-          <div className="bg-white border border-[#E5E5E5] rounded-xl p-4 shadow-xs">
-            <div className="flex items-center space-x-2 text-xs text-[#737373] mb-1">
+          <div className="bg-white border border-[#E5E5E5] rounded-xl p-3 sm:p-4 shadow-xs">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 text-[11px] sm:text-xs text-[#737373] mb-1">
               <Clock className="w-3.5 h-3.5 text-amber-600" />
               <span>Pending Check-Out</span>
             </div>
-            <div className="text-2xl font-bold text-amber-700">
+            <div className="text-xl sm:text-2xl font-bold text-amber-700">
               {summary ? summary.checkedInOnlyCount : '0'}
             </div>
-            <div className="text-[11px] text-[#737373] mt-1">Evening: 16:30 – 17:00 IST</div>
+            <div className="text-[10px] sm:text-[11px] text-[#737373] mt-1 truncate">Evening: 16:30 – 17:00 IST</div>
           </div>
 
-          <div className="bg-white border border-[#E5E5E5] rounded-xl p-4 shadow-xs">
-            <div className="flex items-center space-x-2 text-xs text-[#737373] mb-1">
+          <div className="bg-white border border-[#E5E5E5] rounded-xl p-3 sm:p-4 shadow-xs">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 text-[11px] sm:text-xs text-[#737373] mb-1">
               <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
               <span>Absent Today</span>
             </div>
-            <div className="text-2xl font-bold text-red-700">
+            <div className="text-xl sm:text-2xl font-bold text-red-700">
               {summary ? summary.absentCount : '0'}
             </div>
-            <div className="text-[11px] text-[#737373] mt-1">Post 09:20 IST window</div>
+            <div className="text-[10px] sm:text-[11px] text-[#737373] mt-1 truncate">Post 09:20 IST window</div>
           </div>
         </div>
 
@@ -443,114 +443,218 @@ export default function AdminDashboard() {
         {/* Tab 1: Live Attendance */}
         {activeTab === 'attendance' && (
           <div className="bg-white border border-[#E5E5E5] rounded-xl overflow-hidden shadow-xs">
-            <div className="px-5 py-4 border-b border-[#E5E5E5]">
-              <h3 className="font-semibold text-sm text-[#171717]">Today&apos;s Attendance Stream</h3>
-              <p className="text-xs text-[#737373]">Live GPS geofence verifications and check-out work reports</p>
+            <div className="px-5 py-4 border-b border-[#E5E5E5] flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-sm text-[#171717]">Today&apos;s Attendance Stream</h3>
+                <p className="text-xs text-[#737373]">Live GPS geofence verifications and check-out work reports</p>
+              </div>
+              <span className="text-xs font-bold text-[#171717] bg-neutral-100 px-2.5 py-1 rounded-full">
+                {summary?.recordsSummary?.length || 0} Records
+              </span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[700px]">
-                <thead className="bg-[#F7F6F2] border-b border-[#E5E5E5] text-[#737373] uppercase tracking-wider">
-                  <tr>
-                    <th className="px-5 py-3 font-semibold">Staff Code</th>
-                    <th className="px-5 py-3 font-semibold">Employee</th>
-                    <th className="px-5 py-3 font-semibold">Duty Location</th>
-                    <th className="px-5 py-3 font-semibold">Check-In</th>
-                    <th className="px-5 py-3 font-semibold">Check-Out</th>
-                    <th className="px-5 py-3 font-semibold">Status</th>
-                    <th className="px-5 py-3 font-semibold">Work Report</th>
-                    <th className="px-5 py-3 font-semibold text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E5E5]">
-                  {!summary || summary.recordsSummary?.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="px-5 py-8 text-center text-[#737373]">
-                        No check-in activity recorded yet for today.
-                      </td>
-                    </tr>
-                  ) : (
-                    summary.recordsSummary.map((rec) => (
-                      <tr key={rec.id} className="hover:bg-[#F9F9F8]">
-                        <td className="px-5 py-3.5 font-mono font-medium text-[#171717]">
-                          {rec.employee.employeeCode}
-                        </td>
-                        <td className="px-5 py-3.5 font-medium text-[#171717]">
-                          {rec.employee.fullName}
-                          <div className="text-[11px] text-[#737373]">{rec.employee.employeeType}</div>
-                        </td>
-                        <td className="px-5 py-3.5 text-[#171717]">
-                          {rec.checkInLocationName || 'Branch'}
+
+            {!summary || summary.recordsSummary?.length === 0 ? (
+              <div className="px-5 py-12 text-center text-xs text-[#737373]">
+                No check-in activity recorded yet for today.
+              </div>
+            ) : (
+              <>
+                {/* Mobile Cards View (< 640px) */}
+                <div className="block sm:hidden divide-y divide-[#E5E5E5] p-3 space-y-3">
+                  {summary.recordsSummary.map((rec) => (
+                    <div
+                      key={rec.id}
+                      className="bg-[#FBFBFA] border border-[#E5E5E5] rounded-xl p-3.5 space-y-2.5 shadow-2xs"
+                    >
+                      <div className="flex items-start justify-between border-b border-[#EAE9E4] pb-2">
+                        <div>
+                          <div className="font-bold text-xs text-[#171717]">{rec.employee.fullName}</div>
+                          <div className="text-[11px] text-[#737373] font-mono">
+                            {rec.employee.employeeCode} • {rec.employee.employeeType}
+                          </div>
+                        </div>
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
+                            rec.status === 'CHECKED_OUT'
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                              : rec.status === 'CORRECTED'
+                              ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                              : 'bg-amber-50 text-amber-800 border border-amber-200'
+                          }`}
+                        >
+                          {rec.status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-[11px] bg-white p-2 rounded-lg border border-[#EAE9E4]">
+                        <div>
+                          <span className="text-[#737373] block text-[10px] uppercase font-medium">Check-In</span>
+                          <strong className="text-[#171717]">
+                            {rec.checkInAt
+                              ? new Date(rec.checkInAt).toLocaleTimeString('en-IN', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  timeZone: 'Asia/Kolkata',
+                                })
+                              : '—'}
+                          </strong>
+                        </div>
+                        <div>
+                          <span className="text-[#737373] block text-[10px] uppercase font-medium">Check-Out</span>
+                          <strong className="text-[#171717]">
+                            {rec.checkOutAt
+                              ? new Date(rec.checkOutAt).toLocaleTimeString('en-IN', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  timeZone: 'Asia/Kolkata',
+                                })
+                              : 'Pending'}
+                          </strong>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-[#737373] space-y-1">
+                        <div>
+                          Location: <strong className="text-[#171717]">{rec.checkInLocationName || 'Branch'}</strong>
                           {rec.checkInDistanceMetres !== null && (
-                            <span className="text-[11px] text-[#737373] block">
-                              Offset: {Number(rec.checkInDistanceMetres)}m
+                            <span className="text-[10px] text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.2 rounded ml-1.5">
+                              {Number(rec.checkInDistanceMetres)}m from pin
                             </span>
                           )}
-                        </td>
-                        <td className="px-5 py-3.5 text-[#171717]">
-                          {rec.checkInAt
-                            ? new Date(rec.checkInAt).toLocaleTimeString('en-IN', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                timeZone: 'Asia/Kolkata',
-                              })
-                            : '—'}
-                        </td>
-                        <td className="px-5 py-3.5 text-[#171717]">
-                          {rec.checkOutAt
-                            ? new Date(rec.checkOutAt).toLocaleTimeString('en-IN', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                timeZone: 'Asia/Kolkata',
-                              })
-                            : 'Pending'}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
-                              rec.status === 'CHECKED_OUT'
-                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                : rec.status === 'CORRECTED'
-                                ? 'bg-blue-50 text-blue-800 border border-blue-200'
-                                : 'bg-amber-50 text-amber-800 border border-amber-200'
-                            }`}
-                          >
-                            {rec.status}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-[#737373] max-w-xs truncate italic">
-                          {rec.workReport || 'Pending Check-Out'}
-                        </td>
-                        <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end space-x-1.5">
-                            <button
-                              onClick={() => setEditingAttendance(rec)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                              title="Edit Record"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() =>
-                                setDeletingItem({
-                                  type: 'attendance',
-                                  id: rec.id,
-                                  name: `Attendance record of ${rec.employee?.fullName}`,
-                                  warning: 'This will delete this check-in/out record from the database.',
-                                })
-                              }
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                              title="Delete Record"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                        </div>
+                        {rec.workReport && (
+                          <div className="italic text-[#171717] bg-white p-2 rounded border border-[#EAE9E4] text-[11px]">
+                            &quot;{rec.workReport}&quot;
                           </div>
-                        </td>
+                        )}
+                      </div>
+
+                      <div className="pt-1.5 flex items-center justify-end space-x-2 border-t border-[#EAE9E4]">
+                        <button
+                          onClick={() => setEditingAttendance(rec)}
+                          className="flex items-center space-x-1 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() =>
+                            setDeletingItem({
+                              type: 'attendance',
+                              id: rec.id,
+                              name: `Attendance record of ${rec.employee?.fullName}`,
+                              warning: 'This will delete this check-in/out record from the database.',
+                            })
+                          }
+                          className="flex items-center space-x-1 px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table View (>= 640px) */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs min-w-[700px]">
+                    <thead className="bg-[#F7F6F2] border-b border-[#E5E5E5] text-[#737373] uppercase tracking-wider">
+                      <tr>
+                        <th className="px-5 py-3 font-semibold">Staff Code</th>
+                        <th className="px-5 py-3 font-semibold">Employee</th>
+                        <th className="px-5 py-3 font-semibold">Duty Location</th>
+                        <th className="px-5 py-3 font-semibold">Check-In</th>
+                        <th className="px-5 py-3 font-semibold">Check-Out</th>
+                        <th className="px-5 py-3 font-semibold">Status</th>
+                        <th className="px-5 py-3 font-semibold">Work Report</th>
+                        <th className="px-5 py-3 font-semibold text-right">Actions</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E5E5]">
+                      {summary.recordsSummary.map((rec) => (
+                        <tr key={rec.id} className="hover:bg-[#F9F9F8]">
+                          <td className="px-5 py-3.5 font-mono font-medium text-[#171717]">
+                            {rec.employee.employeeCode}
+                          </td>
+                          <td className="px-5 py-3.5 font-medium text-[#171717]">
+                            {rec.employee.fullName}
+                            <div className="text-[11px] text-[#737373]">{rec.employee.employeeType}</div>
+                          </td>
+                          <td className="px-5 py-3.5 text-[#171717]">
+                            {rec.checkInLocationName || 'Branch'}
+                            {rec.checkInDistanceMetres !== null && (
+                              <span className="text-[11px] text-[#737373] block">
+                                Offset: {Number(rec.checkInDistanceMetres)}m
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5 text-[#171717]">
+                            {rec.checkInAt
+                              ? new Date(rec.checkInAt).toLocaleTimeString('en-IN', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  timeZone: 'Asia/Kolkata',
+                                })
+                              : '—'}
+                          </td>
+                          <td className="px-5 py-3.5 text-[#171717]">
+                            {rec.checkOutAt
+                              ? new Date(rec.checkOutAt).toLocaleTimeString('en-IN', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  timeZone: 'Asia/Kolkata',
+                                })
+                              : 'Pending'}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
+                                rec.status === 'CHECKED_OUT'
+                                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                  : rec.status === 'CORRECTED'
+                                  ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                                  : 'bg-amber-50 text-amber-800 border border-amber-200'
+                              }`}
+                            >
+                              {rec.status}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-[#737373] max-w-xs truncate italic">
+                            {rec.workReport || 'Pending Check-Out'}
+                          </td>
+                          <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end space-x-1.5">
+                              <button
+                                onClick={() => setEditingAttendance(rec)}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Edit Record"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setDeletingItem({
+                                    type: 'attendance',
+                                    id: rec.id,
+                                    name: `Attendance record of ${rec.employee?.fullName}`,
+                                    warning: 'This will delete this check-in/out record from the database.',
+                                  })
+                                }
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Delete Record"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -559,7 +663,12 @@ export default function AdminDashboard() {
           <div className="bg-white border border-[#E5E5E5] rounded-xl overflow-hidden shadow-xs">
             <div className="px-5 py-4 border-b border-[#E5E5E5] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="font-semibold text-sm text-[#171717]">Employee Directory</h3>
+                <h3 className="font-semibold text-sm text-[#171717] flex items-center space-x-2">
+                  <span>Employee Directory</span>
+                  <span className="px-2 py-0.5 bg-neutral-100 text-[#171717] rounded-full text-[11px] font-bold">
+                    {employees.length} Staff
+                  </span>
+                </h3>
                 <p className="text-xs text-[#737373]">
                   Office Staff & Field Staff registered across LABE Andhra Pradesh branches
                 </p>
@@ -572,98 +681,200 @@ export default function AdminDashboard() {
                 <span>Add Employee</span>
               </button>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[700px]">
-                <thead className="bg-[#F7F6F2] border-b border-[#E5E5E5] text-[#737373] uppercase tracking-wider">
-                  <tr>
-                    <th className="px-5 py-3 font-semibold">Code</th>
-                    <th className="px-5 py-3 font-semibold">Full Name</th>
-                    <th className="px-5 py-3 font-semibold">Category</th>
-                    <th className="px-5 py-3 font-semibold">Assigned Branch</th>
-                    <th className="px-5 py-3 font-semibold">Mobile</th>
-                    <th className="px-5 py-3 font-semibold">Status</th>
-                    <th className="px-5 py-3 font-semibold text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E5E5]">
+
+            {employees.length === 0 ? (
+              <div className="px-5 py-12 text-center text-xs text-[#737373]">
+                No staff registered yet. Click &quot;Add Employee&quot; to register your first team member.
+              </div>
+            ) : (
+              <>
+                {/* Mobile Cards View (< 640px) */}
+                <div className="block sm:hidden divide-y divide-[#E5E5E5] p-3 space-y-3">
                   {employees.map((emp) => (
-                    <tr key={emp.id} className="hover:bg-[#F0EFEB]/50">
-                      <td className="px-5 py-3.5 font-mono font-medium text-[#171717]">{emp.employeeCode}</td>
-                      <td className="px-5 py-3.5 font-medium text-[#171717]">
-                        {emp.fullName}
-                        <div className="text-[11px] text-[#737373]">{emp.email}</div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
-                            emp.employeeType === 'OFFICE_STAFF'
-                              ? 'bg-blue-50 text-blue-800 border border-blue-200'
-                              : 'bg-purple-50 text-purple-800 border border-purple-200'
-                          }`}
-                        >
-                          {emp.employeeType}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-[#171717]">
-                        {emp.assignedBranch ? (
-                          <div className="flex items-center space-x-1">
-                            <Building2 className="w-3.5 h-3.5 text-[#737373]" />
-                            <span>{emp.assignedBranch.name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-[#737373] italic">Dynamic Schedule</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5 text-[#737373] font-mono">{emp.mobile}</td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
-                          emp.status === 'ACTIVE'
-                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                            : 'bg-red-50 text-red-800 border border-red-200'
-                        }`}>
-                          {emp.status}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end space-x-1.5">
-                          {emp.employeeType === 'FIELD_STAFF' && (
-                            <button
-                              onClick={() => setSelectedFieldEmployee(emp)}
-                              className="inline-flex items-center space-x-1 px-2 py-1 text-[11px] font-medium bg-[#F0EFEB] hover:bg-[#E5E5E5] text-[#171717] rounded transition-colors mr-1"
-                              title="7-Day Schedule"
-                            >
-                              <Calendar className="w-3 h-3" />
-                              <span className="hidden sm:inline">Schedule</span>
-                            </button>
-                          )}
-                          <button
-                            onClick={() => setEditingEmployee(emp)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="Edit Employee"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() =>
-                              setDeletingItem({
-                                type: 'employee',
-                                id: emp.id,
-                                name: `${emp.fullName} (${emp.employeeCode})`,
-                                warning: 'This will permanently remove this employee and their login user account from the entire database.',
-                              })
-                            }
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title="Delete Employee"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                    <div
+                      key={emp.id}
+                      className="bg-[#FBFBFA] border border-[#E5E5E5] rounded-xl p-3.5 space-y-2.5 shadow-2xs"
+                    >
+                      <div className="flex items-start justify-between border-b border-[#EAE9E4] pb-2">
+                        <div>
+                          <div className="font-bold text-xs text-[#171717]">{emp.fullName}</div>
+                          <div className="text-[11px] text-[#737373]">{emp.email}</div>
+                          <span className="inline-block mt-1 font-mono text-[10px] text-[#737373] bg-neutral-100 px-1.5 py-0.5 rounded">
+                            {emp.employeeCode}
+                          </span>
                         </div>
-                      </td>
-                    </tr>
+                        <div className="flex flex-col items-end space-y-1">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
+                              emp.employeeType === 'OFFICE_STAFF'
+                                ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                                : 'bg-purple-50 text-purple-800 border border-purple-200'
+                            }`}
+                          >
+                            {emp.employeeType}
+                          </span>
+                          <span
+                            className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-semibold ${
+                              emp.status === 'ACTIVE'
+                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                : 'bg-red-50 text-red-800 border border-red-200'
+                            }`}
+                          >
+                            {emp.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-[#737373] space-y-1">
+                        <div className="flex items-center space-x-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-[#737373] shrink-0" />
+                          <span>
+                            Branch:{' '}
+                            <strong className="text-[#171717]">
+                              {emp.assignedBranch ? emp.assignedBranch.name : 'Dynamic Schedule'}
+                            </strong>
+                          </span>
+                        </div>
+                        <div>
+                          Mobile: <strong className="text-[#171717] font-mono">{emp.mobile}</strong>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 flex items-center justify-end space-x-2 border-t border-[#EAE9E4]">
+                        {emp.employeeType === 'FIELD_STAFF' && (
+                          <button
+                            onClick={() => setSelectedFieldEmployee(emp)}
+                            className="flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold bg-[#F0EFEB] hover:bg-[#E5E5E5] text-[#171717] rounded-lg transition-colors"
+                          >
+                            <Calendar className="w-3 h-3" />
+                            <span>Schedule</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setEditingEmployee(emp)}
+                          className="flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() =>
+                            setDeletingItem({
+                              type: 'employee',
+                              id: emp.id,
+                              name: `${emp.fullName} (${emp.employeeCode})`,
+                              warning:
+                                'This will permanently remove this employee and their login user account from the entire database.',
+                            })
+                          }
+                          className="flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </div>
+
+                {/* Desktop Table View (>= 640px) */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs min-w-[700px]">
+                    <thead className="bg-[#F7F6F2] border-b border-[#E5E5E5] text-[#737373] uppercase tracking-wider">
+                      <tr>
+                        <th className="px-5 py-3 font-semibold">Code</th>
+                        <th className="px-5 py-3 font-semibold">Full Name</th>
+                        <th className="px-5 py-3 font-semibold">Category</th>
+                        <th className="px-5 py-3 font-semibold">Assigned Branch</th>
+                        <th className="px-5 py-3 font-semibold">Mobile</th>
+                        <th className="px-5 py-3 font-semibold">Status</th>
+                        <th className="px-5 py-3 font-semibold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E5E5]">
+                      {employees.map((emp) => (
+                        <tr key={emp.id} className="hover:bg-[#F0EFEB]/50">
+                          <td className="px-5 py-3.5 font-mono font-medium text-[#171717]">{emp.employeeCode}</td>
+                          <td className="px-5 py-3.5 font-medium text-[#171717]">
+                            {emp.fullName}
+                            <div className="text-[11px] text-[#737373]">{emp.email}</div>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
+                                emp.employeeType === 'OFFICE_STAFF'
+                                  ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                                  : 'bg-purple-50 text-purple-800 border border-purple-200'
+                              }`}
+                            >
+                              {emp.employeeType}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-[#171717]">
+                            {emp.assignedBranch ? (
+                              <div className="flex items-center space-x-1">
+                                <Building2 className="w-3.5 h-3.5 text-[#737373]" />
+                                <span>{emp.assignedBranch.name}</span>
+                              </div>
+                            ) : (
+                              <span className="text-[#737373] italic">Dynamic Schedule</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5 text-[#737373] font-mono">{emp.mobile}</td>
+                          <td className="px-5 py-3.5">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
+                                emp.status === 'ACTIVE'
+                                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                  : 'bg-red-50 text-red-800 border border-red-200'
+                              }`}
+                            >
+                              {emp.status}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end space-x-1.5">
+                              {emp.employeeType === 'FIELD_STAFF' && (
+                                <button
+                                  onClick={() => setSelectedFieldEmployee(emp)}
+                                  className="inline-flex items-center space-x-1 px-2 py-1 text-[11px] font-medium bg-[#F0EFEB] hover:bg-[#E5E5E5] text-[#171717] rounded transition-colors mr-1"
+                                  title="7-Day Schedule"
+                                >
+                                  <Calendar className="w-3 h-3" />
+                                  <span className="hidden sm:inline">Schedule</span>
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setEditingEmployee(emp)}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Edit Employee"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setDeletingItem({
+                                    type: 'employee',
+                                    id: emp.id,
+                                    name: `${emp.fullName} (${emp.employeeCode})`,
+                                    warning:
+                                      'This will permanently remove this employee and their login user account from the entire database.',
+                                  })
+                                }
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Delete Employee"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -863,88 +1074,165 @@ export default function AdminDashboard() {
         {/* Tab 4: Correction Requests */}
         {activeTab === 'corrections' && (
           <div className="bg-white border border-[#E5E5E5] rounded-xl overflow-hidden shadow-xs">
-            <div className="px-5 py-4 border-b border-[#E5E5E5]">
-              <h3 className="font-semibold text-sm text-[#171717]">Attendance Correction Requests</h3>
-              <p className="text-xs text-[#737373]">Employee-submitted adjustment requests requiring administrative review</p>
+            <div className="px-5 py-4 border-b border-[#E5E5E5] flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-sm text-[#171717]">Attendance Correction Requests</h3>
+                <p className="text-xs text-[#737373]">Employee-submitted adjustment requests requiring administrative review</p>
+              </div>
+              <span className="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                {corrections.filter((c) => c.status === 'PENDING').length} Pending
+              </span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[700px]">
-                <thead className="bg-[#F7F6F2] border-b border-[#E5E5E5] text-[#737373] uppercase tracking-wider">
-                  <tr>
-                    <th className="px-5 py-3 font-semibold">Employee</th>
-                    <th className="px-5 py-3 font-semibold">Type</th>
-                    <th className="px-5 py-3 font-semibold">Reason</th>
-                    <th className="px-5 py-3 font-semibold">Status</th>
-                    <th className="px-5 py-3 font-semibold">Requested At</th>
-                    <th className="px-5 py-3 font-semibold text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E5E5]">
-                  {corrections.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-5 py-8 text-center text-[#737373]">
-                        No attendance correction requests recorded.
-                      </td>
-                    </tr>
-                  ) : (
-                    corrections.map((corr) => (
-                      <tr key={corr.id} className="hover:bg-[#F9F9F8]">
-                        <td className="px-5 py-3.5 font-medium text-[#171717]">
-                          {corr.employee.fullName}
-                          <div className="text-[11px] text-[#737373] font-mono">{corr.employee.employeeCode}</div>
-                        </td>
-                        <td className="px-5 py-3.5 text-[#171717]">{corr.correctionType}</td>
-                        <td className="px-5 py-3.5 text-[#737373] max-w-sm">{corr.employeeReason}</td>
-                        <td className="px-5 py-3.5">
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
-                              corr.status === 'APPROVED'
-                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                : corr.status === 'REJECTED'
-                                ? 'bg-red-50 text-red-800 border border-red-200'
-                                : 'bg-amber-50 text-amber-800 border border-amber-200'
-                            }`}
-                          >
-                            {corr.status}
+
+            {corrections.length === 0 ? (
+              <div className="px-5 py-12 text-center text-xs text-[#737373]">
+                No attendance correction requests recorded.
+              </div>
+            ) : (
+              <>
+                {/* Mobile Cards View (< 640px) */}
+                <div className="block sm:hidden divide-y divide-[#E5E5E5] p-3 space-y-3">
+                  {corrections.map((corr) => (
+                    <div
+                      key={corr.id}
+                      className="bg-[#FBFBFA] border border-[#E5E5E5] rounded-xl p-3.5 space-y-2.5 shadow-2xs"
+                    >
+                      <div className="flex items-start justify-between border-b border-[#EAE9E4] pb-2">
+                        <div>
+                          <div className="font-bold text-xs text-[#171717]">{corr.employee.fullName}</div>
+                          <div className="text-[11px] text-[#737373] font-mono">
+                            {corr.employee.employeeCode} • {corr.correctionType}
+                          </div>
+                        </div>
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
+                            corr.status === 'APPROVED'
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                              : corr.status === 'REJECTED'
+                              ? 'bg-red-50 text-red-800 border border-red-200'
+                              : 'bg-amber-50 text-amber-800 border border-amber-200'
+                          }`}
+                        >
+                          {corr.status}
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-[#737373] space-y-1.5">
+                        <div className="bg-white p-2.5 rounded-lg border border-[#EAE9E4] text-[#171717]">
+                          <span className="text-[10px] text-[#737373] uppercase font-semibold block mb-0.5">
+                            Reason for adjustment:
                           </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-[#737373]">
-                          {new Date(corr.requestedAt).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                        </td>
-                        <td className="px-5 py-3.5 text-right">
-                          {corr.status === 'PENDING' ? (
-                            <div className="flex items-center justify-end space-x-1.5">
-                              <button
-                                onClick={() => handleReviewCorrection(corr.id, 'APPROVED')}
-                                disabled={reviewingId === corr.id}
-                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-medium flex items-center space-x-1 transition-colors disabled:opacity-50"
-                              >
-                                {reviewingId === corr.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                                <span>Approve</span>
-                              </button>
-                              <button
-                                onClick={() => handleReviewCorrection(corr.id, 'REJECTED')}
-                                disabled={reviewingId === corr.id}
-                                className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[11px] font-medium flex items-center space-x-1 transition-colors disabled:opacity-50"
-                              >
-                                {reviewingId === corr.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
-                                <span>Reject</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-[11px] text-[#737373] italic">Reviewed</span>
-                          )}
-                        </td>
+                          {corr.employeeReason}
+                        </div>
+                        <div className="text-[11px] text-[#737373]">
+                          Requested:{' '}
+                          <strong className="text-[#171717]">
+                            {new Date(corr.requestedAt).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </strong>
+                        </div>
+                      </div>
+
+                      {corr.status === 'PENDING' && (
+                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#EAE9E4]">
+                          <button
+                            onClick={() => handleReviewCorrection(corr.id, 'APPROVED')}
+                            disabled={reviewingId === corr.id}
+                            className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors disabled:opacity-50"
+                          >
+                            {reviewingId === corr.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                            <span>Approve</span>
+                          </button>
+                          <button
+                            onClick={() => handleReviewCorrection(corr.id, 'REJECTED')}
+                            disabled={reviewingId === corr.id}
+                            className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors disabled:opacity-50"
+                          >
+                            {reviewingId === corr.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                            <span>Reject</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table View (>= 640px) */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs min-w-[700px]">
+                    <thead className="bg-[#F7F6F2] border-b border-[#E5E5E5] text-[#737373] uppercase tracking-wider">
+                      <tr>
+                        <th className="px-5 py-3 font-semibold">Employee</th>
+                        <th className="px-5 py-3 font-semibold">Type</th>
+                        <th className="px-5 py-3 font-semibold">Reason</th>
+                        <th className="px-5 py-3 font-semibold">Status</th>
+                        <th className="px-5 py-3 font-semibold">Requested At</th>
+                        <th className="px-5 py-3 font-semibold text-right">Action</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E5E5]">
+                      {corrections.map((corr) => (
+                        <tr key={corr.id} className="hover:bg-[#F9F9F8]">
+                          <td className="px-5 py-3.5 font-medium text-[#171717]">
+                            {corr.employee.fullName}
+                            <div className="text-[11px] text-[#737373] font-mono">{corr.employee.employeeCode}</div>
+                          </td>
+                          <td className="px-5 py-3.5 text-[#171717]">{corr.correctionType}</td>
+                          <td className="px-5 py-3.5 text-[#737373] max-w-sm">{corr.employeeReason}</td>
+                          <td className="px-5 py-3.5">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
+                                corr.status === 'APPROVED'
+                                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                  : corr.status === 'REJECTED'
+                                  ? 'bg-red-50 text-red-800 border border-red-200'
+                                  : 'bg-amber-50 text-amber-800 border border-amber-200'
+                              }`}
+                            >
+                              {corr.status}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-[#737373]">
+                            {new Date(corr.requestedAt).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            {corr.status === 'PENDING' ? (
+                              <div className="flex items-center justify-end space-x-1.5">
+                                <button
+                                  onClick={() => handleReviewCorrection(corr.id, 'APPROVED')}
+                                  disabled={reviewingId === corr.id}
+                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-medium flex items-center space-x-1 transition-colors disabled:opacity-50"
+                                >
+                                  {reviewingId === corr.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                  <span>Approve</span>
+                                </button>
+                                <button
+                                  onClick={() => handleReviewCorrection(corr.id, 'REJECTED')}
+                                  disabled={reviewingId === corr.id}
+                                  className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[11px] font-medium flex items-center space-x-1 transition-colors disabled:opacity-50"
+                                >
+                                  {reviewingId === corr.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
+                                  <span>Reject</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-[#737373] italic">Reviewed</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -1017,51 +1305,103 @@ export default function AdminDashboard() {
         {/* Tab 6: Audit Trail */}
         {activeTab === 'audit' && (
           <div className="bg-white border border-[#E5E5E5] rounded-xl overflow-hidden shadow-xs">
-            <div className="px-5 py-4 border-b border-[#E5E5E5]">
-              <h3 className="font-semibold text-sm text-[#171717]">System Audit Log Trail</h3>
-              <p className="text-xs text-[#737373]">Immutable record of authentication, geofence, and administration actions</p>
+            <div className="px-5 py-4 border-b border-[#E5E5E5] flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-sm text-[#171717]">System Audit Log Trail</h3>
+                <p className="text-xs text-[#737373]">Immutable record of authentication, geofence, and administration actions</p>
+              </div>
+              <span className="text-xs font-bold text-[#171717] bg-neutral-100 px-2.5 py-1 rounded-full">
+                {auditLogs.length} Events
+              </span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[700px]">
-                <thead className="bg-[#F7F6F2] border-b border-[#E5E5E5] text-[#737373] uppercase tracking-wider">
-                  <tr>
-                    <th className="px-5 py-3 font-semibold">Timestamp</th>
-                    <th className="px-5 py-3 font-semibold">Actor</th>
-                    <th className="px-5 py-3 font-semibold">Action</th>
-                    <th className="px-5 py-3 font-semibold">Entity</th>
-                    <th className="px-5 py-3 font-semibold">IP Address</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5E5E5]">
-                  {auditLogs.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-5 py-8 text-center text-[#737373]">
-                        No audit logs recorded yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    auditLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-[#F9F9F8]">
-                        <td className="px-5 py-3 text-[#737373]">
-                          {new Date(log.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
-                        </td>
-                        <td className="px-5 py-3 font-medium text-[#171717]">
-                          {log.actor?.email || 'System'}
-                          <span className="text-[10px] text-[#737373] block">{log.actorRole}</span>
-                        </td>
-                        <td className="px-5 py-3">
-                          <span className="font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-[11px]">
-                            {log.action}
+
+            {auditLogs.length === 0 ? (
+              <div className="px-5 py-12 text-center text-xs text-[#737373]">
+                No audit logs recorded yet.
+              </div>
+            ) : (
+              <>
+                {/* Mobile Cards View (< 640px) */}
+                <div className="block sm:hidden divide-y divide-[#E5E5E5] p-3 space-y-3">
+                  {auditLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="bg-[#FBFBFA] border border-[#E5E5E5] rounded-xl p-3.5 space-y-2 shadow-2xs text-xs"
+                    >
+                      <div className="flex items-center justify-between border-b border-[#EAE9E4] pb-2">
+                        <span className="font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded text-[11px] font-semibold">
+                          {log.action}
+                        </span>
+                        <span className="text-[10px] text-[#737373]">
+                          {new Date(log.createdAt).toLocaleTimeString('en-IN', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            timeZone: 'Asia/Kolkata',
+                          })}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1 text-[#737373] text-[11px]">
+                        <div>
+                          Actor: <strong className="text-[#171717]">{log.actor?.email || 'System'}</strong> ({log.actorRole})
+                        </div>
+                        <div>
+                          Entity: <strong className="text-[#171717]">{log.entityType}</strong>
+                        </div>
+                        <div>
+                          Time:{' '}
+                          <span className="text-[#171717]">
+                            {new Date(log.createdAt).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
                           </span>
-                        </td>
-                        <td className="px-5 py-3 text-[#737373]">{log.entityType}</td>
-                        <td className="px-5 py-3 text-[#737373] font-mono">{log.ipAddress || '—'}</td>
+                        </div>
+                        {log.ipAddress && (
+                          <div className="font-mono text-[10px]">IP: {log.ipAddress}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table View (>= 640px) */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs min-w-[700px]">
+                    <thead className="bg-[#F7F6F2] border-b border-[#E5E5E5] text-[#737373] uppercase tracking-wider">
+                      <tr>
+                        <th className="px-5 py-3 font-semibold">Timestamp</th>
+                        <th className="px-5 py-3 font-semibold">Actor</th>
+                        <th className="px-5 py-3 font-semibold">Action</th>
+                        <th className="px-5 py-3 font-semibold">Entity</th>
+                        <th className="px-5 py-3 font-semibold">IP Address</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-[#E5E5E5]">
+                      {auditLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-[#F9F9F8]">
+                          <td className="px-5 py-3 text-[#737373]">
+                            {new Date(log.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                          </td>
+                          <td className="px-5 py-3 font-medium text-[#171717]">
+                            {log.actor?.email || 'System'}
+                            <span className="text-[10px] text-[#737373] block">{log.actorRole}</span>
+                          </td>
+                          <td className="px-5 py-3">
+                            <span className="font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-[11px]">
+                              {log.action}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-[#737373]">{log.entityType}</td>
+                          <td className="px-5 py-3 text-[#737373] font-mono">{log.ipAddress || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         )}
 

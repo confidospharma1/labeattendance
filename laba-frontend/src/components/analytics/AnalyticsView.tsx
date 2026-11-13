@@ -317,7 +317,60 @@ export const AnalyticsView: React.FC = () => {
               </span>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Mobile Branch Cards (< 640px) */}
+            <div className="block sm:hidden divide-y divide-[#E5E5E5] p-3 space-y-3">
+              {data.branchPerformance.map((b) => (
+                <div
+                  key={b.id}
+                  className="bg-[#FBFBFA] border border-[#E5E5E5] rounded-xl p-3.5 space-y-2.5 shadow-2xs"
+                >
+                  <div className="flex items-start justify-between border-b border-[#EAE9E4] pb-2">
+                    <div>
+                      <div className="font-bold text-xs text-[#171717]">{b.name}</div>
+                      <div className="text-[11px] text-[#737373] font-mono">
+                        {b.branchCode} • {b.district}
+                      </div>
+                    </div>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${
+                        b.geofenceComplianceRate >= 90
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border border-amber-200'
+                      }`}
+                    >
+                      {b.geofenceComplianceRate}% GPS Match
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px] bg-white p-2 rounded-lg border border-[#EAE9E4]">
+                    <div>
+                      <span className="text-[#737373] block text-[10px] uppercase">Assigned Staff</span>
+                      <strong className="text-[#171717]">{b.totalStaff} Members</strong>
+                    </div>
+                    <div>
+                      <span className="text-[#737373] block text-[10px] uppercase">Present Today</span>
+                      <strong className="text-emerald-700">{b.presentToday} Present</strong>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-[11px] mb-1">
+                      <span className="text-[#737373]">Attendance Rate</span>
+                      <strong className="text-[#171717]">{b.attendanceRate}%</strong>
+                    </div>
+                    <div className="w-full bg-[#EAE9E4] rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-emerald-600 h-2 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, b.attendanceRate)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View (>= 640px) */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#F7F6F2] text-[#737373] uppercase tracking-wider font-semibold border-b border-[#E5E5E5]">
                   <tr>

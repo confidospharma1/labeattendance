@@ -86,9 +86,9 @@ export const WeeklyScheduleModal: React.FC<WeeklyScheduleModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-5 border border-[#E5E5E5] space-y-4 my-8">
-        <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-150">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-4 sm:p-6 border border-[#E5E5E5] space-y-4 my-auto max-h-[92vh] flex flex-col">
+        <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3 shrink-0">
           <div className="flex items-center space-x-2">
             <Calendar className="w-4 h-4 text-[#171717]" />
             <div>

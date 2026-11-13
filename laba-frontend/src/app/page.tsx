@@ -56,17 +56,17 @@ export default function Home() {
   }, [error, retryCount, checkHealth]);
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#F7F6F2]">
-      <div className="w-full max-w-xl bg-white border border-[#E5E5E5] rounded-lg p-8 shadow-sm">
+    <main className="min-h-screen flex flex-col items-center justify-center p-3 sm:p-6 bg-[#F7F6F2]">
+      <div className="w-full max-w-xl bg-white border border-[#E5E5E5] rounded-xl p-5 sm:p-8 shadow-sm">
         <div className="flex items-center space-x-3 mb-6 border-b border-[#E5E5E5] pb-4">
-          <div className="w-10 h-10 bg-[#171717] text-white flex items-center justify-center rounded font-bold text-lg">
+          <div className="w-10 h-10 bg-[#171717] text-white flex items-center justify-center rounded-lg font-bold text-lg shrink-0">
             L
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-[#171717]">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[#171717]">
               LABE Attendance Management System
             </h1>
-            <p className="text-sm text-[#737373]">
+            <p className="text-xs sm:text-sm text-[#737373]">
               Multi-Branch GPS Geofencing Attendance Platform
             </p>
           </div>
@@ -74,7 +74,7 @@ export default function Home() {
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-[#737373]">
+            <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-[#737373]">
               System Status & Connectivity
             </h2>
             <button
@@ -91,7 +91,7 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="border border-[#E5E5E5] rounded p-3 bg-[#F7F6F2]">
               <div className="flex items-center space-x-2 text-xs text-[#737373] mb-1">
                 <Activity className="w-3.5 h-3.5" />
