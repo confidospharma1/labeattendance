@@ -26,6 +26,8 @@ import {
   Trash2,
   BarChart3,
   Menu,
+  Search,
+  ExternalLink,
 } from 'lucide-react';
 import { AddBranchModal } from '@/components/branch/AddBranchModal';
 import { EditBranchModal } from '@/components/branch/EditBranchModal';
@@ -78,6 +80,7 @@ export default function AdminDashboard() {
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [branchSearch, setBranchSearch] = useState('');
 
   // Modals state
   const [isAddBranchOpen, setIsAddBranchOpen] = useState(false);
@@ -103,7 +106,7 @@ export default function AdminDashboard() {
       const [empRes, summaryRes, branchRes, corrRes, policyRes, auditRes] = await Promise.all([
         apiClient.get('/employees?limit=50'),
         apiClient.get('/attendance/dashboard'),
-        apiClient.get('/branches'),
+        apiClient.get('/branches?limit=100'),
         apiClient.get('/attendance/corrections'),
         apiClient.get('/policies/current').catch(() => ({ data: { data: null } })),
         apiClient.get('/audit-logs?limit=50').catch(() => ({ data: { data: [] } })),
@@ -111,7 +114,11 @@ export default function AdminDashboard() {
 
       setEmployees(empRes.data.data.items || []);
       setSummary(summaryRes.data.data || null);
-      setBranches(branchRes.data.data.branches || []);
+      const branchList =
+        branchRes.data?.data?.items ||
+        branchRes.data?.data?.branches ||
+        (Array.isArray(branchRes.data?.data) ? branchRes.data.data : []);
+      setBranches(branchList);
       setCorrections(corrRes.data.data || []);
       setPolicy(policyRes.data.data || null);
       setAuditLogs(auditRes.data.data || []);
@@ -665,68 +672,191 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-4 rounded-xl border border-[#E5E5E5] gap-3">
               <div>
-                <h3 className="font-semibold text-sm text-[#171717]">Pharmacy Branch Network</h3>
+                <h3 className="font-semibold text-sm text-[#171717] flex items-center space-x-2">
+                  <span>Pharmacy Branch Network</span>
+                  <span className="px-2 py-0.5 bg-neutral-100 text-[#171717] rounded-full text-[11px] font-bold">
+                    {branches.length} Active {branches.length === 1 ? 'Branch' : 'Branches'}
+                  </span>
+                </h3>
                 <p className="text-xs text-[#737373]">
                   GPS geofencing centers and active boundaries across Andhra Pradesh
                 </p>
               </div>
-              <button
-                onClick={() => setIsAddBranchOpen(true)}
-                className="inline-flex items-center space-x-1 px-3 py-1.5 bg-[#171717] hover:bg-black text-white rounded-lg text-xs font-medium transition-colors self-start sm:self-auto"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Branch</span>
-              </button>
+              <div className="flex items-center space-x-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#737373]" />
+                  <input
+                    type="text"
+                    value={branchSearch}
+                    onChange={(e) => setBranchSearch(e.target.value)}
+                    placeholder="Search branch, district, code..."
+                    className="w-full pl-8 pr-3 py-1.5 text-xs border border-[#E5E5E5] rounded-lg focus:outline-none focus:ring-1 focus:ring-black bg-[#FBFBFA]"
+                  />
+                  {branchSearch && (
+                    <button
+                      onClick={() => setBranchSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#737373] hover:text-[#171717]"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => setIsAddBranchOpen(true)}
+                  className="inline-flex items-center space-x-1 px-3 py-1.5 bg-[#171717] hover:bg-black text-white rounded-lg text-xs font-medium transition-colors shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Branch</span>
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {branches.map((b) => (
-                <div key={b.id} className="bg-white border border-[#E5E5E5] rounded-xl p-5 space-y-3 shadow-xs hover:border-[#CCCCCC] transition-all">
-                  <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-2">
-                    <div>
-                      <div className="font-bold text-sm text-[#171717]">{b.name}</div>
-                      <span className="text-[11px] font-mono text-[#737373]">{b.branchCode}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <button
-                        onClick={() => setEditingBranch(b)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        title="Edit Branch"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() =>
-                          setDeletingItem({
-                            type: 'branch',
-                            id: b.id,
-                            name: `${b.name} (${b.branchCode})`,
-                            warning: 'This will permanently remove this branch and all current staff assignments tied to it.',
-                          })
-                        }
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                        title="Delete Branch"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="text-xs text-[#737373] space-y-1">
-                    <div>Address: <strong className="text-[#171717]">{b.address}</strong></div>
-                    <div>District: <strong className="text-[#171717]">{b.district}, {b.state}</strong></div>
-                  </div>
-                  <div className="p-2.5 bg-[#F9F9F8] border border-[#E5E5E5] rounded-lg text-xs space-y-1">
-                    <div className="flex items-center space-x-1.5 font-medium text-[#171717]">
-                      <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                      <span>{Number(b.latitude).toFixed(4)}°, {Number(b.longitude).toFixed(4)}°</span>
-                    </div>
-                    <div className="text-[#737373] pl-5">
-                      Radius: <strong className="text-emerald-700">{b.geofenceRadiusMetres} metres</strong>
-                    </div>
-                  </div>
+            {branches.length === 0 ? (
+              <div className="bg-white border border-dashed border-[#CCCCCC] rounded-xl p-8 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mx-auto text-[#737373]">
+                  <Building2 className="w-6 h-6" />
                 </div>
-              ))}
-            </div>
+                <div className="text-sm font-semibold text-[#171717]">No Pharmacy Branches Found</div>
+                <p className="text-xs text-[#737373] max-w-sm mx-auto">
+                  Create your first pharmacy branch location with a GPS geofence anchor point to start tracking attendance.
+                </p>
+                <button
+                  onClick={() => setIsAddBranchOpen(true)}
+                  className="inline-flex items-center space-x-1.5 px-4 py-2 bg-[#171717] hover:bg-black text-white rounded-lg text-xs font-medium transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add First Branch</span>
+                </button>
+              </div>
+            ) : (
+              (() => {
+                const filtered = branches.filter((b) => {
+                  if (!branchSearch.trim()) return true;
+                  const q = branchSearch.toLowerCase();
+                  return (
+                    b.name?.toLowerCase().includes(q) ||
+                    b.branchCode?.toLowerCase().includes(q) ||
+                    b.district?.toLowerCase().includes(q) ||
+                    b.address?.toLowerCase().includes(q)
+                  );
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="bg-white border border-[#E5E5E5] rounded-xl p-8 text-center space-y-2">
+                      <p className="text-xs text-[#737373]">No branches found matching &quot;{branchSearch}&quot;.</p>
+                      <button
+                        onClick={() => setBranchSearch('')}
+                        className="text-xs text-blue-600 hover:underline font-medium"
+                      >
+                        Clear search filter
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filtered.map((b) => (
+                      <div
+                        key={b.id}
+                        className="bg-white border border-[#E5E5E5] rounded-xl p-5 space-y-3 shadow-xs hover:border-[#CCCCCC] transition-all flex flex-col justify-between"
+                      >
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between border-b border-[#E5E5E5] pb-2.5">
+                            <div>
+                              <div className="font-bold text-sm text-[#171717]">{b.name}</div>
+                              <div className="flex items-center space-x-2 mt-0.5">
+                                <span className="text-[11px] font-mono text-[#737373] bg-neutral-100 px-1.5 py-0.5 rounded">
+                                  {b.branchCode}
+                                </span>
+                                {b.isActive !== false ? (
+                                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
+                                    Active
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-semibold text-neutral-500 bg-neutral-100 px-1.5 py-0.2 rounded">
+                                    Inactive
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-1 shrink-0">
+                              <button
+                                onClick={() => setEditingBranch(b)}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Edit Branch"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setDeletingItem({
+                                    type: 'branch',
+                                    id: b.id,
+                                    name: `${b.name} (${b.branchCode})`,
+                                    warning:
+                                      'This will permanently remove this branch and all current staff assignments tied to it.',
+                                  })
+                                }
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Delete Branch"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="text-xs text-[#737373] space-y-1">
+                            <div>
+                              Address: <strong className="text-[#171717]">{b.address}</strong>
+                            </div>
+                            <div>
+                              District: <strong className="text-[#171717]">{b.district}, {b.state || 'Andhra Pradesh'}</strong>
+                            </div>
+                            {b.manager && (
+                              <div>
+                                Manager: <strong className="text-[#171717]">{b.manager.fullName}</strong>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 pt-2">
+                          <div className="p-2.5 bg-[#F9F9F8] border border-[#E5E5E5] rounded-lg text-xs space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-1.5 font-medium text-[#171717]">
+                                <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                <span>{Number(b.latitude).toFixed(4)}°, {Number(b.longitude).toFixed(4)}°</span>
+                              </div>
+                              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">
+                                {b.geofenceRadiusMetres}m radius
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[11px] text-[#737373] pt-1 border-t border-[#EAE9E4]">
+                              <span>
+                                {b.activeEmployeeCount !== undefined
+                                  ? `${b.activeEmployeeCount} Staff Assigned`
+                                  : 'Staff assigned'}
+                              </span>
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${b.latitude},${b.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline flex items-center space-x-0.5 font-medium"
+                              >
+                                <span>Google Maps</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()
+            )}
           </div>
         )}
 

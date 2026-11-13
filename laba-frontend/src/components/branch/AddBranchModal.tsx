@@ -124,6 +124,12 @@ export const AddBranchModal: React.FC<AddBranchModalProps> = ({ isOpen, onClose,
         geofenceRadiusMetres: Number(radiusMetres),
       });
 
+      setName('');
+      setAddress('');
+      setDistrict('Kurnool');
+      setLatitude(15.8281);
+      setLongitude(78.0373);
+      setRadiusMetres(100);
       onSuccess();
       onClose();
     } catch (err: any) {

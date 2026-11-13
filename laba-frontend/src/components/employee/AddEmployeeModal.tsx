@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api';
 import { X, UserPlus, Loader2, Check, AlertCircle } from 'lucide-react';
 
@@ -21,12 +21,36 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
   const [employeeType, setEmployeeType] = useState<'OFFICE_STAFF' | 'FIELD_STAFF' | 'ADMIN'>('OFFICE_STAFF');
-  const [branchId, setBranchId] = useState(branches[0]?.id || '');
+  const [branchesList, setBranchesList] = useState<any[]>(branches || []);
+  const [branchId, setBranchId] = useState(branches?.[0]?.id || '');
   const [password, setPassword] = useState('Password@123');
   const [contactId, setContactId] = useState('');
   const [profileNotes, setProfileNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (branches && branches.length > 0) {
+      setBranchesList(branches);
+      if (!branchId) {
+        setBranchId(branches[0].id);
+      }
+    } else if (isOpen) {
+      apiClient
+        .get('/branches?limit=100')
+        .then((res) => {
+          const list =
+            res.data?.data?.items ||
+            res.data?.data?.branches ||
+            (Array.isArray(res.data?.data) ? res.data.data : []);
+          setBranchesList(list);
+          if (list.length > 0 && !branchId) {
+            setBranchId(list[0].id);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [branches, isOpen, branchId]);
 
   if (!isOpen) return null;
 
@@ -163,7 +187,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 className="w-full p-2 border border-[#E5E5E5] rounded focus:outline-none focus:ring-1 focus:ring-black bg-white"
               >
                 <option value="">Select Branch...</option>
-                {branches.map((b) => (
+                {branchesList.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.name} ({b.branchCode}) — {b.district}
                   </option>

@@ -142,6 +142,7 @@ export class BranchService {
 
     return {
       items: formatted,
+      branches: formatted,
       pagination: {
         page: query.page,
         limit: query.limit,

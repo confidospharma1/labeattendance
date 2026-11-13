@@ -25,9 +25,27 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   const [employeeType, setEmployeeType] = useState('OFFICE_STAFF');
   const [status, setStatus] = useState('ACTIVE');
   const [branchId, setBranchId] = useState('');
+  const [branchesList, setBranchesList] = useState<any[]>(branches || []);
   const [profileNotes, setProfileNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (branches && branches.length > 0) {
+      setBranchesList(branches);
+    } else if (isOpen) {
+      apiClient
+        .get('/branches?limit=100')
+        .then((res) => {
+          const list =
+            res.data?.data?.items ||
+            res.data?.data?.branches ||
+            (Array.isArray(res.data?.data) ? res.data.data : []);
+          setBranchesList(list);
+        })
+        .catch(() => {});
+    }
+  }, [branches, isOpen]);
 
   useEffect(() => {
     if (employee) {
@@ -190,7 +208,7 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
                 className="w-full px-3 py-2 text-xs bg-white border border-[#E5E5E5] rounded-lg focus:outline-none focus:border-[#171717] text-[#171717]"
               >
                 <option value="">Select Branch...</option>
-                {branches.map((b) => (
+                {branchesList.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.name} ({b.branchCode})
                   </option>
