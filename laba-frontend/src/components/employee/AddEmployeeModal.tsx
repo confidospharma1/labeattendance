@@ -58,13 +58,19 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     e.preventDefault();
     setError(null);
 
+    const sanitizedMobile = mobile.replace(/\D/g, '').slice(-10);
+
     if (employeeType === 'OFFICE_STAFF' && !branchId) {
-      setError('Office Staff must be assigned to an active branch.');
+      if (branchesList.length === 0) {
+        setError('No pharmacy branches exist yet in the database. Please create a Branch first in the "Branches & Geofences" tab before adding Office Staff.');
+      } else {
+        setError('Office Staff must be assigned to an active branch.');
+      }
       return;
     }
 
-    if (!/^[6-9]\d{9}$/.test(mobile.trim())) {
-      setError('Mobile must be a valid 10-digit Indian phone number starting with 6-9.');
+    if (!/^[6-9]\d{9}$/.test(sanitizedMobile)) {
+      setError('Mobile must be a valid 10-digit Indian phone number starting with 6, 7, 8, or 9 (e.g. 9876543210).');
       return;
     }
 
@@ -74,7 +80,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       await apiClient.post('/employees', {
         fullName: fullName.trim(),
         email: email.trim().toLowerCase(),
-        mobile: mobile.trim(),
+        mobile: sanitizedMobile,
         employeeType,
         password,
         branchId: employeeType === 'OFFICE_STAFF' ? branchId : undefined,
@@ -85,7 +91,15 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err?.response?.data?.error?.message || 'Failed to create employee profile.');
+      const errData = err?.response?.data?.error;
+      if (errData?.details && Array.isArray(errData.details)) {
+        const detailMsgs = errData.details
+          .map((d: any) => `${d.field ? d.field.replace('body.', '') + ': ' : ''}${d.message}`)
+          .join(', ');
+        setError(`${errData.message}: ${detailMsgs}`);
+      } else {
+        setError(errData?.message || err.message || 'Failed to create employee profile.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -193,6 +207,11 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   </option>
                 ))}
               </select>
+              {branchesList.length === 0 && (
+                <p className="mt-1 text-[11px] text-amber-700 bg-amber-50 p-1.5 rounded border border-amber-200">
+                  ⚠️ No branches found in the database. Please create a Pharmacy Branch first in the &quot;Branches &amp; Geofences&quot; tab before adding Office Staff.
+                </p>
+              )}
             </div>
           )}
 
