@@ -116,6 +116,7 @@ export const WeeklyScheduleModal: React.FC<WeeklyScheduleModalProps> = ({
     latitude: number;
     longitude: number;
     boundaryRadius: number;
+    polygon?: [number, number][];
   }) => {
     if (mapDayIndex === null) return;
     setSchedules((prev) => {
@@ -127,6 +128,7 @@ export const WeeklyScheduleModal: React.FC<WeeklyScheduleModalProps> = ({
         latitude: location.latitude,
         longitude: location.longitude,
         geofenceRadiusMetres: location.boundaryRadius || 6000,
+        polygon: location.polygon,
         attendanceEnabled: true,
         mapConfirmed: true,
       };
@@ -380,7 +382,7 @@ export const WeeklyScheduleModal: React.FC<WeeklyScheduleModalProps> = ({
                                 <div className="flex items-center space-x-1.5">
                                   <Check className="w-3 h-3 text-emerald-600 shrink-0" />
                                   <span>
-                                    Bounded Territory: <strong>{s.locationName || 'Area'}</strong> (Auto-selected Google Maps Boundary)
+                                    Bounded Territory: <strong>{s.locationName || 'Area'}</strong> (Google Maps Boundary Polygon)
                                   </span>
                                 </div>
                                 <button

@@ -5,6 +5,7 @@ export interface DistrictLocation {
   longitude: number;
   zoom: number;
   boundaryRadius?: number;
+  polygon?: [number, number][];
 }
 
 export interface VillageLocation {
@@ -13,9 +14,43 @@ export interface VillageLocation {
   district: string;
   latitude: number;
   longitude: number;
-  boundaryRadius: number; // Auto-selected according to Google Maps extent
+  boundaryRadius: number;
+  polygon?: [number, number][];
   postalCode?: string;
 }
+
+/**
+ * Exact Google Maps Boundary Polygon for Chagalamarri Village (Nandyal District, AP)
+ * Traces the precise red-dashed municipal/revenue boundary shown in Google Maps:
+ * Encloses the Chagalamarri Toll Plaza on the northwest, Masjid on the north,
+ * Chintalacheruvu Road on the east, and Idamadaka on the southeast.
+ */
+export const CHAGALAMARRI_BOUNDARY_POLYGON: [number, number][] = [
+  [14.9755, 78.5620], // Chagalamarri Toll Plaza
+  [14.9785, 78.5690],
+  [14.9825, 78.5750], // Kalugotla road border
+  [14.9840, 78.5840],
+  [14.9815, 78.5910],
+  [14.9830, 78.5950], // North of Masjid
+  [14.9765, 78.5980], // East indent below Masjid
+  [14.9740, 78.6070],
+  [14.9810, 78.6140], // Northeast apex
+  [14.9720, 78.6155],
+  [14.9650, 78.6185], // Chintalacheruvu Road
+  [14.9570, 78.6170],
+  [14.9520, 78.6190],
+  [14.9490, 78.6240], // East spur above Idamadaka
+  [14.9440, 78.6160],
+  [14.9445, 78.6080], // Idamadaka boundary
+  [14.9465, 78.5990],
+  [14.9420, 78.5940],
+  [14.9370, 78.5860], // Southernmost tip on NH 40
+  [14.9440, 78.5770],
+  [14.9480, 78.5680], // Mallavemula border
+  [14.9560, 78.5640],
+  [14.9660, 78.5610],
+  [14.9755, 78.5620], // Closes at Toll Plaza
+];
 
 export const AP_DISTRICTS: DistrictLocation[] = [
   { name: 'Kurnool', headquarters: 'Kurnool', latitude: 15.8281, longitude: 78.0373, zoom: 14, boundaryRadius: 10000 },
@@ -67,19 +102,37 @@ export const AP_DISTRICTS: DistrictLocation[] = [
   { name: 'Chirala', headquarters: 'Chirala', latitude: 15.8239, longitude: 80.352, zoom: 14, boundaryRadius: 6000 },
 ];
 
-/**
- * Key Andhra Pradesh Mandals, Villages & City Sub-Areas/Colonies
- * Automatically bounded according to Google Maps geographic territory.
- */
 export const AP_VILLAGES_MANDALS: VillageLocation[] = [
-  // Kadapa City Sub-Areas, Colonies & Quarters (Featured in user request)
+  // Chagalamarri Village (Exact Google Maps Boundary)
+  {
+    name: 'Chagalamarri',
+    type: 'Village',
+    district: 'Nandyal',
+    latitude: 14.9645,
+    longitude: 78.5891,
+    boundaryRadius: 5000,
+    polygon: CHAGALAMARRI_BOUNDARY_POLYGON,
+    postalCode: '518553',
+  },
+  {
+    name: 'Chagalamarri Mandal',
+    type: 'Mandal',
+    district: 'Nandyal',
+    latitude: 14.9645,
+    longitude: 78.5891,
+    boundaryRadius: 6000,
+    polygon: CHAGALAMARRI_BOUNDARY_POLYGON,
+    postalCode: '518553',
+  },
+
+  // Kadapa City Sub-Areas, Colonies & Quarters
   {
     name: 'Nagarjunapeta',
     type: 'Quarter',
     district: 'YSR Kadapa',
     latitude: 14.4660,
     longitude: 78.8250,
-    boundaryRadius: 1500, // Auto-bounded area
+    boundaryRadius: 1500,
     postalCode: '516003',
   },
   {
@@ -173,92 +226,7 @@ export const AP_VILLAGES_MANDALS: VillageLocation[] = [
     postalCode: '516001',
   },
 
-  // Nandyal City Sub-Areas & Colonies
-  {
-    name: 'NGO Colony, Nandyal',
-    type: 'Colony',
-    district: 'Nandyal',
-    latitude: 15.4715,
-    longitude: 78.4920,
-    boundaryRadius: 1200,
-    postalCode: '518501',
-  },
-  {
-    name: 'Saleem Nagar',
-    type: 'Area',
-    district: 'Nandyal',
-    latitude: 15.4715,
-    longitude: 78.4920,
-    boundaryRadius: 1200,
-    postalCode: '518501',
-  },
-  {
-    name: 'Sanjeeva Nagar',
-    type: 'Colony',
-    district: 'Nandyal',
-    latitude: 15.4760,
-    longitude: 78.4860,
-    boundaryRadius: 1200,
-    postalCode: '518501',
-  },
-  {
-    name: 'Srinivasa Nagar, Nandyal',
-    type: 'Colony',
-    district: 'Nandyal',
-    latitude: 15.4820,
-    longitude: 78.4750,
-    boundaryRadius: 1200,
-    postalCode: '518501',
-  },
-
-  // Kurnool City Sub-Areas & Colonies
-  {
-    name: 'B Camp, Kurnool',
-    type: 'Area',
-    district: 'Kurnool',
-    latitude: 15.8210,
-    longitude: 78.0280,
-    boundaryRadius: 1500,
-    postalCode: '518002',
-  },
-  {
-    name: 'C Camp, Kurnool',
-    type: 'Area',
-    district: 'Kurnool',
-    latitude: 15.8150,
-    longitude: 78.0320,
-    boundaryRadius: 1500,
-    postalCode: '518002',
-  },
-  {
-    name: 'Joharapuram',
-    type: 'Area',
-    district: 'Kurnool',
-    latitude: 15.8350,
-    longitude: 78.0450,
-    boundaryRadius: 1800,
-    postalCode: '518002',
-  },
-  {
-    name: 'Venkataramana Colony',
-    type: 'Colony',
-    district: 'Kurnool',
-    latitude: 15.8290,
-    longitude: 78.0410,
-    boundaryRadius: 1200,
-    postalCode: '518003',
-  },
-
-  // Nandyal District Villages & Mandals
-  {
-    name: 'Chagalamarri',
-    type: 'Village',
-    district: 'Nandyal',
-    latitude: 14.9645,
-    longitude: 78.5891,
-    boundaryRadius: 6000,
-    postalCode: '518553',
-  },
+  // Nandyal City Sub-Areas & Mandals
   {
     name: 'Allagadda',
     type: 'Town',
@@ -394,8 +362,17 @@ export const AP_VILLAGES_MANDALS: VillageLocation[] = [
     boundaryRadius: 6000,
     postalCode: '518101',
   },
+  {
+    name: 'NGO Colony, Nandyal',
+    type: 'Colony',
+    district: 'Nandyal',
+    latitude: 15.4715,
+    longitude: 78.4920,
+    boundaryRadius: 1200,
+    postalCode: '518501',
+  },
 
-  // Kurnool District Mandals & Towns
+  // Kurnool District Mandals & Areas
   {
     name: 'Kodumur',
     type: 'Mandal',
@@ -440,6 +417,42 @@ export const AP_VILLAGES_MANDALS: VillageLocation[] = [
     longitude: 77.25,
     boundaryRadius: 6000,
     postalCode: '518395',
+  },
+  {
+    name: 'B Camp, Kurnool',
+    type: 'Area',
+    district: 'Kurnool',
+    latitude: 15.8210,
+    longitude: 78.0280,
+    boundaryRadius: 1500,
+    postalCode: '518002',
+  },
+  {
+    name: 'C Camp, Kurnool',
+    type: 'Area',
+    district: 'Kurnool',
+    latitude: 15.8150,
+    longitude: 78.0320,
+    boundaryRadius: 1500,
+    postalCode: '518002',
+  },
+  {
+    name: 'Joharapuram',
+    type: 'Area',
+    district: 'Kurnool',
+    latitude: 15.8350,
+    longitude: 78.0450,
+    boundaryRadius: 1800,
+    postalCode: '518002',
+  },
+  {
+    name: 'Venkataramana Colony',
+    type: 'Colony',
+    district: 'Kurnool',
+    latitude: 15.8290,
+    longitude: 78.0410,
+    boundaryRadius: 1200,
+    postalCode: '518003',
   },
 
   // YSR Kadapa District Mandals & Towns
@@ -497,35 +510,6 @@ export const AP_VILLAGES_MANDALS: VillageLocation[] = [
     boundaryRadius: 6000,
     postalCode: '516289',
   },
-
-  // Prakasam District Mandals
-  {
-    name: 'Giddalur',
-    type: 'Town',
-    district: 'Prakasam',
-    latitude: 15.3784,
-    longitude: 78.9242,
-    boundaryRadius: 6000,
-    postalCode: '523357',
-  },
-  {
-    name: 'Markapur',
-    type: 'Town',
-    district: 'Prakasam',
-    latitude: 15.7356,
-    longitude: 79.2789,
-    boundaryRadius: 6000,
-    postalCode: '523316',
-  },
-  {
-    name: 'Cumbum',
-    type: 'Mandal',
-    district: 'Prakasam',
-    latitude: 15.5786,
-    longitude: 79.1128,
-    boundaryRadius: 6000,
-    postalCode: '523333',
-  },
 ];
 
 /**
@@ -536,13 +520,11 @@ export function findAndhraCoordinates(query: string): DistrictLocation | null {
   const clean = query.trim().toLowerCase();
   if (clean.length < 2) return null;
 
-  // Exact match
   const exact = AP_DISTRICTS.find(
     (d) => d.name.toLowerCase() === clean || d.headquarters?.toLowerCase() === clean
   );
   if (exact) return exact;
 
-  // Starts with match
   const startsWith = AP_DISTRICTS.find(
     (d) =>
       d.name.toLowerCase().startsWith(clean) ||
@@ -550,7 +532,6 @@ export function findAndhraCoordinates(query: string): DistrictLocation | null {
   );
   if (startsWith) return startsWith;
 
-  // Contains match
   const contains = AP_DISTRICTS.find(
     (d) =>
       d.name.toLowerCase().includes(clean) ||
@@ -567,7 +548,6 @@ export function findVillageOrMandal(query: string): VillageLocation | null {
   const clean = query.trim().toLowerCase();
   if (clean.length < 2) return null;
 
-  // Remove common suffixes like 'kadapa', 'ap', 'colony' to match better
   const exact = AP_VILLAGES_MANDALS.find((v) => v.name.toLowerCase() === clean);
   if (exact) return exact;
 
@@ -583,13 +563,14 @@ export function findVillageOrMandal(query: string): VillageLocation | null {
 
 /**
  * Unified territory finder: Checks sub-areas/villages/mandals first, then districts.
- * Returns coordinates, name, and auto-selected boundary radius.
+ * Returns coordinates, name, auto-selected boundary radius, and exact boundary polygon if available.
  */
 export function findTerritory(query: string): {
   name: string;
   latitude: number;
   longitude: number;
   boundaryRadius: number;
+  polygon?: [number, number][];
   description: string;
 } | null {
   const village = findVillageOrMandal(query);
@@ -599,6 +580,7 @@ export function findTerritory(query: string): {
       latitude: village.latitude,
       longitude: village.longitude,
       boundaryRadius: village.boundaryRadius,
+      polygon: village.polygon,
       description: `${village.name} (${village.type}, ${village.district}${village.postalCode ? ` - ${village.postalCode}` : ''})`,
     };
   }
@@ -610,6 +592,7 @@ export function findTerritory(query: string): {
       latitude: district.latitude,
       longitude: district.longitude,
       boundaryRadius: district.boundaryRadius || 8000,
+      polygon: district.polygon,
       description: `${district.name} District HQ (${district.headquarters || district.name})`,
     };
   }

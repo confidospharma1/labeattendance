@@ -77,3 +77,28 @@ export function isCoordinateWithinIndia(lat: number, lng: number): boolean {
   return lat >= 6.0 && lat <= 38.0 && lng >= 68.0 && lng <= 98.0;
 }
 
+/**
+ * Ray-casting algorithm to test whether a coordinate point lies inside an exact boundary polygon.
+ * @param pointLat Latitude of point
+ * @param pointLng Longitude of point
+ * @param polygon Array of [lat, lng] vertices representing the boundary polygon
+ */
+export function isPointInPolygon(
+  pointLat: number,
+  pointLng: number,
+  polygon: [number, number][]
+): boolean {
+  if (!polygon || polygon.length < 3) return false;
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i];
+    const [xj, yj] = polygon[j];
+    const intersect =
+      yi > pointLng !== yj > pointLng &&
+      pointLat < ((xj - xi) * (pointLng - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+
