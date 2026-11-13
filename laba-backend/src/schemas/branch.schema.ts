@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const createBranchSchema = z.object({
   body: z.object({
     name: z.string().min(2, 'Branch name must be at least 2 characters').trim(),
-    branchCode: z.string().min(2, 'Branch code required').trim().toUpperCase(),
+    branchCode: z.string().trim().toUpperCase().optional(),
     address: z.string().min(5, 'Street address required').trim(),
     district: z.string().min(2, 'District required').trim(),
     state: z.string().default('Andhra Pradesh'),

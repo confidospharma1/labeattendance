@@ -236,3 +236,4 @@ export const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
     </div>
   );
 };
+

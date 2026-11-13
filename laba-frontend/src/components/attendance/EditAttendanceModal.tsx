@@ -195,3 +195,4 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
     </div>
   );
 };
+

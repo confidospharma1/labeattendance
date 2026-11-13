@@ -17,18 +17,34 @@ export class BranchService {
       );
     }
 
-    // Check duplicate branch code
-    const existing = await prisma.branch.findFirst({
-      where: { branchCode: input.branchCode, organizationId },
-    });
-    if (existing) {
-      throw new AppError(`Branch code '${input.branchCode}' is already registered.`, 409, 'DUPLICATE_BRANCH_CODE');
+    // Handle or auto-generate branchCode
+    let branchCode = input.branchCode ? input.branchCode.trim().toUpperCase() : '';
+    if (!branchCode) {
+      const branchCount = await prisma.branch.count({ where: { organizationId } });
+      const nextNum = (branchCount + 1).toString().padStart(3, '0');
+      branchCode = `LABE-B-${nextNum}`;
+      // Verify collision
+      const duplicate = await prisma.branch.findFirst({ where: { branchCode } });
+      if (duplicate) {
+        branchCode = `LABE-B-${nextNum}-${Math.floor(100 + Math.random() * 900)}`;
+      }
+    } else {
+      const existing = await prisma.branch.findFirst({
+        where: { branchCode, organizationId },
+      });
+      if (existing) {
+        throw new AppError(
+          `Branch code '${branchCode}' is already registered. Please enter a different code or leave blank to auto-generate.`,
+          409,
+          'DUPLICATE_BRANCH_CODE'
+        );
+      }
     }
 
     const branch = await prisma.branch.create({
       data: {
         organizationId,
-        branchCode: input.branchCode,
+        branchCode,
         name: input.name,
         address: input.address,
         district: input.district,
