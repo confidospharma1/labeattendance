@@ -32,6 +32,9 @@ export class PolicyController {
         eveningEnd,
         defaultGeofenceRadiusMetres,
         gpsAccuracyRejectMetres,
+        faceVerificationRequired,
+        faceMatchThreshold,
+        lateAccessHours,
         notes,
       } = req.body;
 
@@ -61,6 +64,17 @@ export class PolicyController {
             eveningEnd: eveningEnd || '17:00',
             defaultGeofenceRadiusMetres: defaultGeofenceRadiusMetres || 100,
             gpsAccuracyRejectMetres: gpsAccuracyRejectMetres || 200,
+            // Keep previous face / late-access settings unless explicitly changed
+            faceVerificationRequired:
+              typeof faceVerificationRequired === 'boolean' ? faceVerificationRequired : (latest?.faceVerificationRequired ?? true),
+            faceMatchThreshold:
+              typeof faceMatchThreshold === 'number' && faceMatchThreshold >= 0.3 && faceMatchThreshold <= 0.9
+                ? faceMatchThreshold
+                : (latest?.faceMatchThreshold ?? 0.5),
+            lateAccessHours:
+              Number.isInteger(lateAccessHours) && lateAccessHours >= 1 && lateAccessHours <= 168
+                ? lateAccessHours
+                : (latest?.lateAccessHours ?? 24),
             effectiveFrom: new Date(),
             notes: notes || null,
             createdById: req.user!.userId,
