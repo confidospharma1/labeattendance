@@ -14,7 +14,7 @@ import {
   MapPin,
   Compass,
 } from 'lucide-react';
-import { findAndhraCoordinates } from '@/lib/geoData';
+import { findAndhraCoordinates } from '@/lib/districts';
 
 // Fix for default Leaflet icon paths under Webpack/Next.js bundler
 const markerIcon = new L.Icon({

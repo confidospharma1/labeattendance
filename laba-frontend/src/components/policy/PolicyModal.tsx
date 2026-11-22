@@ -138,6 +138,9 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
   const [gpsAccuracyRejectMetres, setGpsAccuracyRejectMetres] = useState(
     currentPolicy?.gpsAccuracyRejectMetres || 200
   );
+  const [faceRequired, setFaceRequired] = useState<boolean>(currentPolicy?.faceVerificationRequired ?? true);
+  const [faceThreshold, setFaceThreshold] = useState<number>(currentPolicy?.faceMatchThreshold ?? 0.5);
+  const [lateHours, setLateHours] = useState<number>(currentPolicy?.lateAccessHours ?? 24);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -150,6 +153,9 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
       setEveningEnd(currentPolicy.eveningEnd || '17:00');
       setDefaultGeofenceRadiusMetres(currentPolicy.defaultGeofenceRadiusMetres || 100);
       setGpsAccuracyRejectMetres(currentPolicy.gpsAccuracyRejectMetres || 200);
+      setFaceRequired(currentPolicy.faceVerificationRequired ?? true);
+      setFaceThreshold(currentPolicy.faceMatchThreshold ?? 0.5);
+      setLateHours(currentPolicy.lateAccessHours ?? 24);
       setNotes(currentPolicy.notes || '');
       setError(null);
     }
@@ -182,6 +188,9 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
         eveningEnd,
         defaultGeofenceRadiusMetres: Number(defaultGeofenceRadiusMetres),
         gpsAccuracyRejectMetres: Number(gpsAccuracyRejectMetres),
+        faceVerificationRequired: faceRequired,
+        faceMatchThreshold: Number(faceThreshold),
+        lateAccessHours: Number(lateHours),
         notes: notes.trim() || undefined,
       });
 
@@ -295,6 +304,25 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                   className="w-full p-2 border border-[#E5E5E5] rounded focus:outline-none focus:ring-1 focus:ring-black"
                 />
                 <span className="text-xs text-[#737373]">metres</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-lg bg-[#F9F9F8] border border-[#E5E5E5]">
+            <label className="flex items-center gap-2 font-medium text-[#171717] sm:col-span-3">
+              <input type="checkbox" checked={faceRequired} onChange={(e) => setFaceRequired(e.target.checked)} className="w-4 h-4 accent-teal-700" />
+              Require face verification for attendance
+            </label>
+            <div className="sm:col-span-2">
+              <label className="block font-medium text-[#171717] mb-1">Face match strictness: {Math.round(faceThreshold * 100)}%</label>
+              <input type="range" min={0.3} max={0.8} step={0.05} value={faceThreshold} onChange={(e) => setFaceThreshold(Number(e.target.value))} disabled={!faceRequired} className="w-full accent-teal-700" />
+              <div className="text-[11px] text-[#737373]">Higher = stricter. 50% is recommended; raise it if wrong people pass, lower it if real staff fail often.</div>
+            </div>
+            <div>
+              <label className="block font-medium text-[#171717] mb-1">Late access lasts</label>
+              <div className="flex items-center space-x-1">
+                <input type="number" min={1} max={168} value={lateHours} onChange={(e) => setLateHours(Number(e.target.value))} className="w-full p-2 border border-[#E5E5E5] rounded" />
+                <span className="text-xs text-[#737373]">hours</span>
               </div>
             </div>
           </div>

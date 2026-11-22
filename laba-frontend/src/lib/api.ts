@@ -1,46 +1,39 @@
 import axios from 'axios';
 
+const OVERRIDE_KEY = 'labe_api_url';
+const DEFAULT_API = 'http://localhost:5000/api/v1';
+
+/**
+ * API base URL, in priority order:
+ * 1. A server address saved on this device (Settings on the login screen) - handy for testing the APK
+ * 2. NEXT_PUBLIC_API_URL baked in at build time (.env.local / .env.production / APK build)
+ * 3. Local development default
+ */
 export const getApiBaseUrl = (): string => {
-  // 1. If executing in browser and accessed via vercel.app or any external public host
   if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    if (host !== 'localhost' && host !== '127.0.0.1' && !host.startsWith('192.168.')) {
-      return 'https://labeattendance.onrender.com/api/v1';
-    }
+    const override = localStorage.getItem(OVERRIDE_KEY);
+    if (override) return override;
   }
+  return process.env.NEXT_PUBLIC_API_URL || DEFAULT_API;
+};
 
-  // 2. If explicitly configured in environment variable
-  if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost')) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-
-  // 3. If running in production build mode
-  if (process.env.NODE_ENV === 'production') {
-    return 'https://labeattendance.onrender.com/api/v1';
-  }
-
-  // 4. Default development fallback
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+export const setApiBaseUrlOverride = (url: string | null) => {
+  if (typeof window === 'undefined') return;
+  if (url) localStorage.setItem(OVERRIDE_KEY, url.replace(/\/+$/, ''));
+  else localStorage.removeItem(OVERRIDE_KEY);
 };
 
 export const apiClient = axios.create({
   baseURL: getApiBaseUrl(),
-  withCredentials: true, // Mandatory for cross-origin / subdomain HTTP-only cookies
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 45000, // 45s to allow for free-tier Render server wakeups
+  withCredentials: true,
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 60000, // free-tier servers can take ~50 s to wake up
 });
 
 apiClient.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    // Guarantee that requests from vercel.app or public hosts always target Render
-    if (host !== 'localhost' && host !== '127.0.0.1' && !host.startsWith('192.168.')) {
-      config.baseURL = 'https://labeattendance.onrender.com/api/v1';
-    }
-
-    const token = localStorage.getItem('labe_token') || localStorage.getItem('laba_token');
+    config.baseURL = getApiBaseUrl();
+    const token = localStorage.getItem('labe_token');
     if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -48,10 +41,11 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // If 401 Unauthorized occurs on client side, let caller or AuthProvider handle redirection
-    return Promise.reject(error);
-  }
-);
+/** Extracts a human-readable message from an API error. */
+export const apiErrorMessage = (err: any, fallback = 'Something went wrong. Please try again.') => {
+  if (err?.code === 'ECONNABORTED') return 'The server took too long to respond. Check your internet and try again.';
+  if (err?.message === 'Network Error') return 'Cannot reach the server. Check your internet connection.';
+  const details = err?.response?.data?.error?.details;
+  if (Array.isArray(details) && details[0]?.message) return details[0].message;
+  return err?.response?.data?.error?.message || err?.message || fallback;
+};

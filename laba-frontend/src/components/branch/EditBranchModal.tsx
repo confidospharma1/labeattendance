@@ -12,7 +12,7 @@ import {
   Navigation,
   Check,
 } from 'lucide-react';
-import { findAndhraCoordinates, AP_DISTRICTS } from '@/lib/geoData';
+import { findAndhraCoordinates, AP_DISTRICTS } from '@/lib/districts';
 
 const BranchMapPicker = dynamic(() => import('./BranchMapPicker'), {
   ssr: false,

@@ -31,7 +31,9 @@ import {
 } from 'lucide-react';
 import { AddBranchModal } from '@/components/branch/AddBranchModal';
 import { EditBranchModal } from '@/components/branch/EditBranchModal';
-import { WeeklyScheduleModal } from '@/components/schedule/WeeklyScheduleModal';
+import { ApprovalsPanel } from '@/components/admin/ApprovalsPanel';
+import { TaskPlanner } from '@/components/admin/TaskPlanner';
+import { LateRequestsPanel } from '@/components/admin/LateRequestsPanel';
 import { AddEmployeeModal } from '@/components/employee/AddEmployeeModal';
 import { EditEmployeeModal } from '@/components/employee/EditEmployeeModal';
 import { EditAttendanceModal } from '@/components/attendance/EditAttendanceModal';
@@ -67,8 +69,9 @@ export default function AdminDashboard() {
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<
-    'attendance' | 'employees' | 'branches' | 'corrections' | 'analytics' | 'audit' | 'policy'
+    'attendance' | 'employees' | 'branches' | 'corrections' | 'analytics' | 'audit' | 'policy' | 'approvals' | 'tasks' | 'late'
   >('attendance');
+  const [plannerEmployeeId, setPlannerEmployeeId] = useState<string | undefined>(undefined);
 
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -86,7 +89,6 @@ export default function AdminDashboard() {
   const [isAddBranchOpen, setIsAddBranchOpen] = useState(false);
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
   const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
-  const [selectedFieldEmployee, setSelectedFieldEmployee] = useState<any | null>(null);
 
   // Edit & Delete state
   const [editingEmployee, setEditingEmployee] = useState<any | null>(null);
@@ -343,7 +345,7 @@ export default function AdminDashboard() {
             <div className="text-xl sm:text-2xl font-bold text-amber-700">
               {summary ? summary.checkedInOnlyCount : '0'}
             </div>
-            <div className="text-[10px] sm:text-[11px] text-[#737373] mt-1 truncate">Evening: 16:30 – 17:00 IST</div>
+            <div className="text-[10px] sm:text-[11px] text-[#737373] mt-1 truncate">Evening: {policy ? `${policy.eveningStart} – ${policy.eveningEnd}` : '—'} IST</div>
           </div>
 
           <div className="bg-white border border-[#E5E5E5] rounded-xl p-3 sm:p-4 shadow-xs">
@@ -354,7 +356,7 @@ export default function AdminDashboard() {
             <div className="text-xl sm:text-2xl font-bold text-red-700">
               {summary ? summary.absentCount : '0'}
             </div>
-            <div className="text-[10px] sm:text-[11px] text-[#737373] mt-1 truncate">Post 09:20 IST window</div>
+            <div className="text-[10px] sm:text-[11px] text-[#737373] mt-1 truncate">After {policy?.morningEnd ?? '—'} IST</div>
           </div>
         </div>
 
@@ -371,6 +373,21 @@ export default function AdminDashboard() {
             >
               Live Attendance ({summary?.recordsSummary?.length || 0})
             </button>
+            {([
+              ['tasks', 'Field Task Planner'],
+              ['approvals', `Approvals (${(summary as any)?.pendingApprovals ?? 0})`],
+              ['late', `Late Requests (${(summary as any)?.pendingLateRequests ?? 0})`],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`px-3 py-2 rounded-lg transition-all ${
+                  activeTab === id ? 'bg-brand-700 text-white shadow-xs' : 'text-[#737373] hover:text-brand-700 hover:bg-white'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
             <button
               onClick={() => setActiveTab('analytics')}
               className={`px-3 py-2 rounded-lg transition-all flex items-center space-x-1.5 ${
@@ -436,6 +453,10 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
+
+        {activeTab === 'tasks' && <TaskPlanner employees={employees} initialEmployeeId={plannerEmployeeId} />}
+        {activeTab === 'approvals' && <ApprovalsPanel branches={branches} employees={employees} onChanged={fetchAdminData} />}
+        {activeTab === 'late' && <LateRequestsPanel onChanged={fetchAdminData} />}
 
         {/* Tab: Analytics Intelligence */}
         {activeTab === 'analytics' && <AnalyticsView />}
@@ -731,7 +752,7 @@ export default function AdminDashboard() {
                           <span>
                             Branch:{' '}
                             <strong className="text-[#171717]">
-                              {emp.assignedBranch ? emp.assignedBranch.name : 'Dynamic Schedule'}
+                              {emp.assignedBranch ? emp.assignedBranch.name : emp.employeeType === 'FIELD_STAFF' ? 'Field (daily tasks)' : '—'}
                             </strong>
                           </span>
                         </div>
@@ -743,12 +764,15 @@ export default function AdminDashboard() {
                       <div className="pt-2 flex items-center justify-end space-x-2 border-t border-[#EAE9E4]">
                         {emp.employeeType === 'FIELD_STAFF' && (
                           <button
-                            onClick={() => setSelectedFieldEmployee(emp)}
-                            className="flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg transition-colors"
-                            title="6-Day Village / Territory Route"
+                            onClick={() => {
+                              setPlannerEmployeeId(emp.id);
+                              setActiveTab('tasks');
+                            }}
+                            className="flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold bg-brand-50 hover:bg-brand-100 text-brand-800 border border-brand-200 rounded-lg transition-colors"
+                            title="Plan daily tasks"
                           >
                             <Calendar className="w-3 h-3" />
-                            <span>6-Day Route</span>
+                            <span>Tasks</span>
                           </button>
                         )}
                         <button
@@ -818,7 +842,7 @@ export default function AdminDashboard() {
                                 <span>{emp.assignedBranch.name}</span>
                               </div>
                             ) : (
-                              <span className="text-[#737373] italic">Dynamic Schedule</span>
+                              <span className="text-[#737373] italic">{emp.employeeType === 'FIELD_STAFF' ? 'Field (daily tasks)' : '—'}</span>
                             )}
                           </td>
                           <td className="px-5 py-3.5 text-[#737373] font-mono">{emp.mobile}</td>
@@ -827,6 +851,8 @@ export default function AdminDashboard() {
                               className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
                                 emp.status === 'ACTIVE'
                                   ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                  : emp.status === 'PENDING_APPROVAL'
+                                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
                                   : 'bg-red-50 text-red-800 border border-red-200'
                               }`}
                             >
@@ -837,12 +863,15 @@ export default function AdminDashboard() {
                             <div className="flex items-center justify-end space-x-1.5">
                               {emp.employeeType === 'FIELD_STAFF' && (
                                 <button
-                                  onClick={() => setSelectedFieldEmployee(emp)}
-                                  className="inline-flex items-center space-x-1 px-2.5 py-1 text-[11px] font-semibold bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded transition-colors mr-1"
-                                  title="6-Day Field Route & Village Assignment"
+                                  onClick={() => {
+                                    setPlannerEmployeeId(emp.id);
+                                    setActiveTab('tasks');
+                                  }}
+                                  className="inline-flex items-center space-x-1 px-2.5 py-1 text-[11px] font-semibold bg-brand-50 hover:bg-brand-100 text-brand-800 border border-brand-200 rounded transition-colors mr-1"
+                                  title="Plan daily tasks"
                                 >
                                   <Calendar className="w-3 h-3" />
-                                  <span>6-Day Route</span>
+                                  <span>Tasks</span>
                                 </button>
                               )}
                               <button
@@ -1459,14 +1488,6 @@ export default function AdminDashboard() {
           onSuccess={fetchAdminData}
         />
 
-        {selectedFieldEmployee && (
-          <WeeklyScheduleModal
-            isOpen={!!selectedFieldEmployee}
-            employee={selectedFieldEmployee}
-            onClose={() => setSelectedFieldEmployee(null)}
-            onSuccess={fetchAdminData}
-          />
-        )}
       </main>
     </div>
   );

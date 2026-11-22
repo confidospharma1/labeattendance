@@ -1,152 +1,148 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/providers/AuthProvider';
 import { useRouter } from 'next/navigation';
-import { apiClient } from '@/lib/api';
-import { LogOut, Building2, Calendar, ShieldCheck, RefreshCw } from 'lucide-react';
+import { LogOut, RefreshCw, Home, History, Loader2, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/providers/AuthProvider';
+import { apiClient, apiErrorMessage } from '@/lib/api';
 import { formatISTDate } from '@/lib/utils';
-import { CheckInCard } from '@/components/attendance/CheckInCard';
-import { CheckOutCard } from '@/components/attendance/CheckOutCard';
 import { AttendanceHistory } from '@/components/attendance/AttendanceHistory';
+import { OfficeAttendance } from '@/components/staff/OfficeAttendance';
+import { FieldTaskList } from '@/components/staff/FieldTaskList';
+import { FaceEnrollCard } from '@/components/staff/FaceEnrollCard';
 
-export default function EmployeeDashboard() {
+export default function EmployeeHome() {
   const { user, logout, loading: authLoading } = useAuth();
   const router = useRouter();
+  const [tab, setTab] = useState<'home' | 'history'>('home');
+  const [today, setToday] = useState<any>(null);
+  const [tasks, setTasks] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [todayStatus, setTodayStatus] = useState<any>(null);
-  const [historyRecords, setHistoryRecords] = useState<any[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const isField = user?.employee?.employeeType === 'FIELD_STAFF';
 
-  const fetchAttendanceData = useCallback(async () => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoadingData(true);
-      const [todayRes, historyRes] = await Promise.all([
+      const [todayRes, historyRes, tasksRes] = await Promise.all([
         apiClient.get('/attendance/today'),
-        apiClient.get('/attendance/my-history?limit=10'),
+        apiClient.get('/attendance/my-history?limit=30'),
+        isField ? apiClient.get('/field-tasks/my') : Promise.resolve(null),
       ]);
-
-      setTodayStatus(todayRes.data.data);
-      setHistoryRecords(historyRes.data.data || []);
+      setToday(todayRes.data.data);
+      setHistory(historyRes.data.data || []);
+      setTasks(tasksRes?.data.data ?? null);
     } catch (err) {
-      console.error('Failed to load attendance details', err);
+      setError(apiErrorMessage(err, 'Could not load your attendance.'));
     } finally {
-      setLoadingData(false);
+      setLoading(false);
     }
-  }, []);
+  }, [isField]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
+    if (authLoading) return;
+    if (!user) {
+      router.replace('/login');
       return;
     }
-
-    if (user) {
-      fetchAttendanceData();
+    if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+      router.replace('/admin');
+      return;
     }
-  }, [user, authLoading, router, fetchAttendanceData]);
+    load();
+  }, [user, authLoading, router, load]);
 
-  if (authLoading || (!user && loadingData)) {
+  if (authLoading || !user) {
     return (
-      <div className="min-h-screen bg-[#F7F6F2] flex items-center justify-center">
-        <div className="text-sm text-[#737373]">Loading dashboard...</div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-6 h-6 animate-spin text-brand-700" />
       </div>
     );
   }
 
-  if (!user) return null;
-
   const emp = user.employee;
+  const needsFace = today?.policy?.faceVerificationRequired && today?.face && !today.face.enrolled;
+  const firstName = emp?.fullName?.split(' ')[0] || 'there';
 
   return (
-    <div className="min-h-screen bg-[#F7F6F2]">
-      {/* Top Header */}
-      <header className="bg-white border-b border-[#E5E5E5] px-4 py-3.5 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 bg-[#171717] text-white flex items-center justify-center rounded font-bold text-sm">
-              L
+    <div className="min-h-screen bg-slate-50 pb-24">
+      <header className="bg-brand-700 text-white pt-[max(env(safe-area-inset-top),0.75rem)]">
+        <div className="max-w-xl mx-auto px-4 pb-5">
+          <div className="flex items-center justify-between h-12">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-white text-brand-700 flex items-center justify-center font-black">L</div>
+              <span className="font-semibold">LABE Attendance</span>
             </div>
-            <div>
-              <div className="font-semibold text-sm leading-tight text-[#171717]">
-                LABE Attendance
-              </div>
-              <div className="text-xs text-[#737373]">
-                {emp?.employeeCode || user.role} • {emp?.employeeType || user.role}
-              </div>
+            <div className="flex items-center gap-1">
+              <button onClick={load} className="p-2 rounded-full hover:bg-white/10" aria-label="Refresh">
+                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+              <button onClick={() => logout()} className="p-2 rounded-full hover:bg-white/10" aria-label="Sign out">
+                <LogOut className="w-5 h-5" />
+              </button>
             </div>
           </div>
-
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => fetchAttendanceData()}
-              className="p-1.5 text-[#737373] hover:text-[#171717] hover:bg-[#F0EFEB] rounded transition-colors"
-              title="Refresh Attendance Status"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-            <span className="text-xs font-medium text-[#171717] hidden sm:inline">
-              {emp?.fullName || user.email}
-            </span>
-            <button
-              onClick={() => logout()}
-              className="p-1.5 text-[#737373] hover:text-[#171717] hover:bg-[#F0EFEB] rounded transition-colors"
-              title="Sign Out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+          <div className="mt-3">
+            <div className="text-brand-100 text-sm">{formatISTDate(new Date())}</div>
+            <h1 className="text-2xl font-bold">Hello, {firstName}</h1>
+            <div className="text-brand-100 text-xs mt-1">
+              {emp?.employeeCode} · {isField ? 'Field staff' : 'Office staff'}
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="max-w-4xl mx-auto p-4 sm:p-6 space-y-5">
-        {/* Profile Card */}
-        <div className="bg-white border border-[#E5E5E5] rounded-lg p-5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-[#E5E5E5]">
-            <div>
-              <h2 className="text-lg font-bold text-[#171717]">{emp?.fullName || 'Employee'}</h2>
-              <p className="text-xs text-[#737373]">
-                ID: <span className="font-mono text-[#171717]">{emp?.employeeCode}</span> • Mobile: {emp?.mobile}
-              </p>
-            </div>
-            <div className="inline-flex items-center space-x-1 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded text-xs font-medium self-start sm:self-auto">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Status: {emp?.status || 'ACTIVE'}</span>
-            </div>
+      <main className="max-w-xl mx-auto px-4 -mt-2 pt-4 space-y-4">
+        {error && (
+          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800 flex gap-2">
+            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span>{error}</span>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 text-xs">
-            <div className="flex items-center space-x-2 text-[#737373]">
-              <Building2 className="w-4 h-4 flex-shrink-0" />
-              <span>
-                {emp?.employeeType === 'FIELD_STAFF' ? 'Assigned Field Territory:' : 'Assigned Branch:'}{' '}
-                <strong className="text-[#171717]">
-                  {emp?.employeeType === 'FIELD_STAFF'
-                    ? (todayStatus?.enforcement?.refName ? `${todayStatus.enforcement.refName} (Google Maps Boundary)` : 'Dynamic Field Route')
-                    : (emp?.assignedBranch ? emp.assignedBranch.name : todayStatus?.enforcement?.refName || 'Pharmacy Branch')}
-                </strong>
-              </span>
-            </div>
-            <div className="flex items-center space-x-2 text-[#737373]">
-              <Calendar className="w-4 h-4 flex-shrink-0" />
-              <span>
-                Today:{' '}
-                <strong className="text-[#171717]">{formatISTDate(new Date())}</strong>
-              </span>
-            </div>
+        {loading && !today && (
+          <div className="py-16 flex justify-center">
+            <Loader2 className="w-6 h-6 animate-spin text-brand-700" />
           </div>
-        </div>
+        )}
 
-        {/* Attendance Action Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <CheckInCard todayStatus={todayStatus} onRefresh={fetchAttendanceData} />
-          <CheckOutCard todayStatus={todayStatus} onRefresh={fetchAttendanceData} />
-        </div>
+        {today && tab === 'home' && (
+          <>
+            {needsFace && <FaceEnrollCard onEnrolled={load} />}
+            {!needsFace &&
+              (isField ? (
+                <FieldTaskList data={tasks} faceRequired={today.policy.faceVerificationRequired} onChange={load} />
+              ) : (
+                <OfficeAttendance today={today} onChange={load} />
+              ))}
+          </>
+        )}
 
-        {/* History Table */}
-        <AttendanceHistory records={historyRecords} onRefresh={fetchAttendanceData} />
+        {today && tab === 'history' && <AttendanceHistory records={history} onRefresh={load} />}
       </main>
+
+      <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
+        <div className="max-w-xl mx-auto grid grid-cols-2">
+          {[
+            { id: 'home', label: isField ? 'Tasks' : 'Today', icon: Home },
+            { id: 'history', label: 'History', icon: History },
+          ].map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id as any)}
+              className={`h-16 flex flex-col items-center justify-center gap-1 text-xs font-medium ${
+                tab === id ? 'text-brand-700' : 'text-slate-500'
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }
