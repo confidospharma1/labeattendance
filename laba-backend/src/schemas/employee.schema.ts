@@ -46,7 +46,7 @@ export const updateEmployeeStatusSchema = z.object({
 export const listEmployeesQuerySchema = z.object({
   query: z.object({
     type: z.enum(['OFFICE_STAFF', 'FIELD_STAFF', 'ADMIN', 'SUPER_ADMIN']).optional(),
-    status: z.enum(['ACTIVE', 'SUSPENDED', 'DEACTIVATED']).optional(),
+    status: z.enum(['PENDING_APPROVAL', 'ACTIVE', 'REJECTED', 'SUSPENDED', 'DEACTIVATED']).optional(),
     branchId: z.string().uuid().optional(),
     search: z.string().optional(),
     page: z.coerce.number().min(1).default(1),

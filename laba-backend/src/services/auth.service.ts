@@ -78,6 +78,22 @@ export class AuthService {
       throw new AppError('Invalid email or password.', 401, 'INVALID_CREDENTIALS');
     }
 
+    // Employee approval status gates access
+    const status = user.employee?.status;
+    if (status === 'PENDING_APPROVAL') {
+      throw new AppError('Your registration is waiting for admin approval.', 403, 'PENDING_APPROVAL');
+    }
+    if (status === 'REJECTED') {
+      throw new AppError(
+        `Your registration was rejected${user.employee?.rejectionReason ? `: ${user.employee.rejectionReason}` : ''}.`,
+        403,
+        'REGISTRATION_REJECTED'
+      );
+    }
+    if (status === 'SUSPENDED' || status === 'DEACTIVATED') {
+      throw new AppError('Your account is not active. Please contact your administrator.', 403, 'EMPLOYEE_INACTIVE');
+    }
+
     // Successful login: reset failed attempts & record login
     await prisma.user.update({
       where: { id: user.id },

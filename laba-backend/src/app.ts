@@ -10,7 +10,8 @@ import { healthRoutes } from './routes/health.routes';
 import { authRoutes } from './routes/auth.routes';
 import { employeeRoutes } from './routes/employee.routes';
 import { branchRoutes } from './routes/branch.routes';
-import { scheduleRoutes } from './routes/schedule.routes';
+import { fieldTaskRoutes } from './routes/fieldTask.routes';
+import { faceRoutes } from './routes/face.routes';
 import { attendanceRoutes } from './routes/attendance.routes';
 import { reportRoutes } from './routes/report.routes';
 import { auditRoutes } from './routes/audit.routes';
@@ -51,17 +52,16 @@ export function createApp() {
           return callback(null, true);
         }
 
-        // Allow any Vercel deployment preview under *.vercel.app for this project
-        if (/^https:\/\/.*\.vercel\.app$/.test(requestOrigin)) {
+        // Android app (Capacitor WebView) and local development origins
+        if (
+          /^(https?|capacitor):\/\/localhost(:\d+)?$/.test(requestOrigin) ||
+          /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(requestOrigin) ||
+          /^http:\/\/(10|192\.168)\.[\d.]+(:\d+)?$/.test(requestOrigin)
+        ) {
           return callback(null, true);
         }
 
-        // Allow any local development origin
-        if (/^http:\/\/localhost(:\d+)?$/.test(requestOrigin) || /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(requestOrigin)) {
-          return callback(null, true);
-        }
-
-        return callback(null, true); // Fallback allow to avoid blocking legitimate cross-origin requests
+        return callback(new Error(`Origin ${requestOrigin} is not allowed by CORS`));
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -71,7 +71,7 @@ export function createApp() {
   );
 
   // Body parsers
-  app.use(express.json({ limit: '1mb' }));
+  app.use(express.json({ limit: '2mb' })); // face descriptors + selfie thumbnails
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
   app.use(cookieParser());
 
@@ -110,7 +110,8 @@ export function createApp() {
   apiRouter.use('/auth', authRoutes);
   apiRouter.use('/employees', employeeRoutes);
   apiRouter.use('/branches', branchRoutes);
-  apiRouter.use('/schedules', scheduleRoutes);
+  apiRouter.use('/field-tasks', fieldTaskRoutes);
+  apiRouter.use('/face', faceRoutes);
   apiRouter.use('/attendance', attendanceRoutes);
   apiRouter.use('/reports', reportRoutes);
   apiRouter.use('/audit-logs', auditRoutes);

@@ -49,3 +49,15 @@ export function isWithinISTWindow(
   return { inWindow, currentMinutes, startMinutes, endMinutes };
 }
 
+
+/**
+ * Converts a work date (UTC midnight representing an IST calendar day) plus an
+ * "HH:MM" IST wall-clock time into the absolute instant.
+ */
+export function istDateTimeFromWorkDate(workDate: Date, timeStr: string): Date {
+  const y = workDate.getUTCFullYear();
+  const m = String(workDate.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(workDate.getUTCDate()).padStart(2, '0');
+  const [hh, mm] = timeStr.split(':');
+  return fromZonedTime(`${y}-${m}-${d}T${hh.padStart(2, '0')}:${(mm || '00').padStart(2, '0')}:00`, TIMEZONE);
+}

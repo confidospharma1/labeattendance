@@ -9,11 +9,40 @@ import {
   updateEmployeeStatusSchema,
   listEmployeesQuerySchema,
 } from '../schemas/employee.schema';
+import { approveSchema, rejectSchema } from '../schemas/registration.schema';
+import { registrationService } from '../services/registration.service';
+import { sendSuccess } from '../utils/response';
 
 const router = Router();
 
 // All employee routes require authentication
 router.use(authenticate);
+
+// Registration approvals (must be declared before '/:id')
+router.get('/pending', authorize(['SUPER_ADMIN', 'ADMIN']), async (req, res, next) => {
+  try {
+    sendSuccess(res, await registrationService.listPending(req.user!.organizationId));
+  } catch (e) {
+    next(e);
+  }
+});
+router.post('/:id/approve', authorize(['SUPER_ADMIN', 'ADMIN']), validate(approveSchema), async (req, res, next) => {
+  try {
+    sendSuccess(res, await registrationService.approve(req.user!.userId, req.user!.organizationId, String(req.params.id), req.body));
+  } catch (e) {
+    next(e);
+  }
+});
+router.post('/:id/reject', authorize(['SUPER_ADMIN', 'ADMIN']), validate(rejectSchema), async (req, res, next) => {
+  try {
+    sendSuccess(
+      res,
+      await registrationService.reject(req.user!.userId, req.user!.organizationId, String(req.params.id), req.body.reason)
+    );
+  } catch (e) {
+    next(e);
+  }
+});
 
 // Create Employee (Admin and Super Admin only)
 router.post(

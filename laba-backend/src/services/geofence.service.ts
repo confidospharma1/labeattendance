@@ -2,181 +2,78 @@ import { prisma } from '../config/database';
 import { AppError } from '../utils/AppError';
 import { LocationRefType } from '@prisma/client';
 import { validateGeofenceBoundary, GeofenceResult } from '../utils/haversine';
+import { GpsProof } from '../schemas/proof.schema';
 
-export interface LocationEnforcement {
+export interface GeofenceTarget {
   type: LocationRefType;
   refId: string;
   refName: string;
-  targetLat?: number;
-  targetLng?: number;
-  radiusMetres?: number;
-  unrestricted: boolean;
+  targetLat: number;
+  targetLng: number;
+  radiusMetres: number;
 }
 
 export class GeofenceService {
-  /**
-   * Resolves the authorized location boundary for an employee on a given work date.
-   * Office Staff -> Must have an active assigned branch.
-   * Field Staff -> Resolved via FieldStaffSchedule with strict state checks.
-   */
-  async resolveLocationEnforcement(
-    employeeId: string,
-    employeeType: string,
-    workDate: Date,
-    organizationId: string
-  ): Promise<LocationEnforcement> {
-    if (employeeType === 'OFFICE_STAFF') {
-      const assignment = await prisma.branchAssignment.findFirst({
-        where: {
-          employeeId,
-          isCurrent: true,
-          branch: {
-            organizationId,
-            isActive: true,
-          },
-        },
-        include: {
-          branch: true,
-        },
-      });
+  /** Office staff: resolve the employee's currently assigned, active branch. */
+  async resolveOfficeBranch(employeeId: string, organizationId: string): Promise<GeofenceTarget> {
+    const assignment = await prisma.branchAssignment.findFirst({
+      where: { employeeId, isCurrent: true, branch: { organizationId, isActive: true } },
+      include: { branch: true },
+    });
 
-      if (!assignment || !assignment.branch) {
-        throw new AppError(
-          'Office staff must have an active branch assignment to record attendance. Please contact your administrator.',
-          403,
-          'NO_BRANCH_ASSIGNED'
-        );
-      }
-
-      return {
-        type: LocationRefType.BRANCH,
-        refId: assignment.branch.id,
-        refName: assignment.branch.name,
-        targetLat: Number(assignment.branch.latitude),
-        targetLng: Number(assignment.branch.longitude),
-        radiusMetres: assignment.branch.geofenceRadiusMetres,
-        unrestricted: false,
-      };
+    if (!assignment?.branch) {
+      throw new AppError(
+        'You are not assigned to an active branch. Please contact your administrator.',
+        403,
+        'NO_BRANCH_ASSIGNED'
+      );
     }
 
-    if (employeeType === 'FIELD_STAFF') {
-      const schedule = await prisma.fieldStaffSchedule.findFirst({
-        where: {
-          employeeId,
-          scheduleDate: workDate,
-        },
-      });
-
-      if (!schedule) {
-        throw new AppError(
-          'No field schedule has been configured for you today. Please contact your manager or administrator.',
-          403,
-          'NO_SCHEDULE_CONFIGURED'
-        );
-      }
-
-      if (schedule.scheduleType === 'WEEKLY_OFF') {
-        throw new AppError(
-          'Today is marked as your weekly off. Attendance is not permitted on weekly off days.',
-          403,
-          'SCHEDULE_WEEKLY_OFF'
-        );
-      }
-
-      if (schedule.scheduleType === 'ATTENDANCE_DISABLED' || !schedule.attendanceEnabled) {
-        throw new AppError(
-          'Attendance has been explicitly disabled for you today by an administrator.',
-          403,
-          'SCHEDULE_ATTENDANCE_DISABLED'
-        );
-      }
-
-      if (schedule.scheduleType === 'UNASSIGNED') {
-        return {
-          type: LocationRefType.UNRESTRICTED,
-          refId: schedule.id,
-          refName: schedule.locationName || 'Field Duty - Unrestricted',
-          unrestricted: true,
-        };
-      }
-
-      if (schedule.scheduleType === 'LOCATION_ASSIGNED') {
-        if (schedule.latitude === null || schedule.longitude === null) {
-          throw new AppError(
-            'Field schedule is configured for location assignment but missing coordinates.',
-            400,
-            'INVALID_FIELD_SCHEDULE'
-          );
-        }
-
-        return {
-          type: LocationRefType.FIELD_SCHEDULE,
-          refId: schedule.id,
-          refName: schedule.locationName || 'Field Assigned Village / Mandal',
-          targetLat: Number(schedule.latitude),
-          targetLng: Number(schedule.longitude),
-          radiusMetres: schedule.geofenceRadiusMetres || 6000,
-          unrestricted: false,
-        };
-      }
-
-      throw new AppError('Unknown field staff schedule type.', 400, 'INVALID_SCHEDULE_TYPE');
-    }
-
-    // Default administrative users fallback to unrestricted
     return {
-      type: LocationRefType.UNRESTRICTED,
-      refId: employeeId,
-      refName: 'Administrative Attendance',
-      unrestricted: true,
+      type: LocationRefType.BRANCH,
+      refId: assignment.branch.id,
+      refName: assignment.branch.name,
+      targetLat: Number(assignment.branch.latitude),
+      targetLng: Number(assignment.branch.longitude),
+      radiusMetres: assignment.branch.geofenceRadiusMetres,
     };
   }
 
-  /**
-   * Validates GPS coordinates against resolved enforcement rules.
-   */
-  validateAttendanceLocation(
-    enforcement: LocationEnforcement,
-    userLat: number,
-    userLng: number
-  ): GeofenceResult {
-    if (enforcement.unrestricted) {
-      return {
-        insideGeofence: true,
-        distanceMetres: 0,
-        radiusMetres: 0,
-        marginMetres: 0,
-      };
+  /** Rejects fixes that are too inaccurate or come from a mock-location app. */
+  assertGpsQuality(gps: GpsProof, rejectAccuracyMetres: number) {
+    if (gps.isMockLocation) {
+      throw new AppError(
+        'A fake / mock location app was detected. Turn it off to mark attendance.',
+        400,
+        'MOCK_LOCATION_DETECTED'
+      );
     }
-
-    if (enforcement.targetLat === undefined || enforcement.targetLng === undefined || enforcement.radiusMetres === undefined) {
-      throw new AppError('Incomplete geofence coordinates for validation.', 500, 'GEOFENCE_CONFIG_ERROR');
+    if (gps.accuracy > rejectAccuracyMetres) {
+      throw new AppError(
+        `GPS accuracy is ±${Math.round(gps.accuracy)}m, but must be within ±${rejectAccuracyMetres}m. Move to an open area and try again.`,
+        400,
+        'POOR_GPS_ACCURACY'
+      );
     }
+  }
 
+  /** Throws unless the fix is within the target radius. */
+  assertInside(target: GeofenceTarget, gps: GpsProof): GeofenceResult {
     const result = validateGeofenceBoundary(
-      userLat,
-      userLng,
-      enforcement.targetLat,
-      enforcement.targetLng,
-      enforcement.radiusMetres
+      gps.latitude,
+      gps.longitude,
+      target.targetLat,
+      target.targetLng,
+      target.radiusMetres
     );
 
     if (!result.insideGeofence) {
-      if (enforcement.type === LocationRefType.FIELD_SCHEDULE) {
-        throw new AppError(
-          `Location Mismatch: You are outside the authorized boundary of "${enforcement.refName}". Attendance can only be recorded from inside the ${enforcement.refName} territory boundary.`,
-          400,
-          'FIELD_LOCATION_MISMATCH'
-        );
-      }
-
       throw new AppError(
-        `You are outside your authorized geofence at "${enforcement.refName}". Distance: ${Math.round(result.distanceMetres)}m, Allowed: ${result.radiusMetres}m (exceeded by ${Math.round(result.distanceMetres - result.radiusMetres)}m).`,
+        `You are ${Math.round(result.distanceMetres)}m from "${target.refName}". You must be within ${target.radiusMetres}m.`,
         400,
         'GEOFENCE_VIOLATION'
       );
     }
-
     return result;
   }
 }

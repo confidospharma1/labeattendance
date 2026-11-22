@@ -1,71 +1,49 @@
-import { geofenceService } from '../../src/services/geofence.service';
+import { geofenceService, GeofenceTarget } from '../../src/services/geofence.service';
 
-describe('GeofenceService - Unit logic', () => {
-  it('should accept check-in when user is unrestricted', () => {
-    const result = geofenceService.validateAttendanceLocation(
-      {
-        type: 'UNRESTRICTED' as any,
-        refId: 'test-unrestricted',
-        refName: 'Field Unrestricted',
-        unrestricted: true,
-      },
-      14.4673,
-      78.8242
-    );
+const kadapa: GeofenceTarget = {
+  type: 'BRANCH' as any,
+  refId: 'branch-1',
+  refName: 'Kadapa Branch',
+  targetLat: 14.4673,
+  targetLng: 78.8242,
+  radiusMetres: 100,
+};
 
-    expect(result.insideGeofence).toBe(true);
-    expect(result.distanceMetres).toBe(0);
-  });
+const gps = (latitude: number, longitude: number, accuracy = 10, isMockLocation?: boolean) => ({
+  latitude,
+  longitude,
+  accuracy,
+  isMockLocation,
+});
 
-  it('should approve location within geofence radius', () => {
-    const kadapaBranchLat = 14.4673;
-    const kadapaBranchLng = 78.8242;
-
-    // A coordinate ~20 meters away
-    const userLat = 14.46745;
-    const userLng = 78.8242;
-
-    const result = geofenceService.validateAttendanceLocation(
-      {
-        type: 'BRANCH' as any,
-        refId: 'branch-1',
-        refName: 'Kadapa Branch',
-        targetLat: kadapaBranchLat,
-        targetLng: kadapaBranchLng,
-        radiusMetres: 100,
-        unrestricted: false,
-      },
-      userLat,
-      userLng
-    );
-
+describe('GeofenceService', () => {
+  it('accepts a fix ~20 m from the branch (radius 100 m)', () => {
+    const result = geofenceService.assertInside(kadapa, gps(14.46745, 78.8242));
     expect(result.insideGeofence).toBe(true);
     expect(result.distanceMetres).toBeLessThan(100);
   });
 
-  it('should throw GEOFENCE_VIOLATION when user is outside radius', () => {
-    const kadapaBranchLat = 14.4673;
-    const kadapaBranchLng = 78.8242;
+  it('rejects a fix ~150 m away with GEOFENCE_VIOLATION', () => {
+    expect(() => geofenceService.assertInside(kadapa, gps(14.4687, 78.8242))).toThrow(
+      expect.objectContaining({ code: 'GEOFENCE_VIOLATION' })
+    );
+  });
 
-    // Nandyal is ~118km away
-    const nandyalLat = 15.4883;
-    const nandyalLng = 78.4842;
+  it('respects a tight 30 m radius', () => {
+    const tight = { ...kadapa, radiusMetres: 30 };
+    expect(() => geofenceService.assertInside(tight, gps(14.46775, 78.8242))).toThrow(); // ~50 m
+    expect(geofenceService.assertInside(tight, gps(14.46745, 78.8242)).insideGeofence).toBe(true); // ~17 m
+  });
 
-    expect(() => {
-      geofenceService.validateAttendanceLocation(
-        {
-          type: 'BRANCH' as any,
-          refId: 'branch-1',
-          refName: 'Kadapa Branch',
-          targetLat: kadapaBranchLat,
-          targetLng: kadapaBranchLng,
-          radiusMetres: 100,
-          unrestricted: false,
-        },
-        nandyalLat,
-        nandyalLng
-      );
-    }).toThrow(/outside your authorized geofence/);
+  it('rejects poor GPS accuracy', () => {
+    expect(() => geofenceService.assertGpsQuality(gps(14.4673, 78.8242, 350), 200)).toThrow(
+      expect.objectContaining({ code: 'POOR_GPS_ACCURACY' })
+    );
+  });
+
+  it('rejects mock locations', () => {
+    expect(() => geofenceService.assertGpsQuality(gps(14.4673, 78.8242, 5, true), 200)).toThrow(
+      expect.objectContaining({ code: 'MOCK_LOCATION_DETECTED' })
+    );
   });
 });
-

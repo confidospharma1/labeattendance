@@ -14,10 +14,10 @@ export class ExcelService {
     const [organization, employees, records, corrections] = await Promise.all([
       prisma.organization.findUnique({ where: { id: organizationId } }),
       prisma.employee.findMany({
-        where: { organizationId, status: EmployeeStatus.ACTIVE },
+        where: { organizationId, status: EmployeeStatus.ACTIVE, employeeType: { in: ['OFFICE_STAFF', 'FIELD_STAFF'] } },
         include: {
           branchAssignments: { where: { isCurrent: true }, include: { branch: true } },
-          fieldSchedules: { where: { scheduleDate: workDate } },
+          fieldTasks: { where: { taskDate: workDate }, orderBy: { sequence: 'asc' } },
         },
       }),
       prisma.attendanceRecord.findMany({
@@ -164,20 +164,21 @@ export class ExcelService {
     wsField.columns = [
       { header: 'Employee Code', key: 'code', width: 16 },
       { header: 'Name', key: 'name', width: 24 },
-      { header: 'Schedule Type', key: 'schedType', width: 20 },
-      { header: 'Location Target', key: 'target', width: 26 },
+      { header: 'Tasks (done / total)', key: 'schedType', width: 20 },
+      { header: 'Task Locations', key: 'target', width: 40 },
       { header: 'Status', key: 'status', width: 16 },
       { header: 'Check-In', key: 'checkIn', width: 16 },
       { header: 'Check-Out', key: 'checkOut', width: 16 },
       { header: 'Work Report', key: 'report', width: 36 },
     ];
     for (const item of fieldEmployeesData) {
-      const sched = item.emp.fieldSchedules[0];
+      const tasks = item.emp.fieldTasks.filter((t: any) => t.status !== 'CANCELLED');
+      const done = tasks.filter((t: any) => t.status === 'COMPLETED' || t.status === 'LATE_COMPLETED').length;
       wsField.addRow({
         code: item.emp.employeeCode,
         name: item.emp.fullName,
-        schedType: sched ? sched.scheduleType : 'UNSCHEDULED',
-        target: sched ? sched.locationName || 'N/A' : 'N/A',
+        schedType: tasks.length ? `${done} / ${tasks.length}` : 'No tasks',
+        target: tasks.length ? tasks.map((t: any) => `${t.locationName} (${t.status})`).join('; ') : 'N/A',
         status: item.rec ? item.rec.status : 'ABSENT',
         checkIn: item.rec?.checkInAt ? format(item.rec.checkInAt, 'HH:mm:ss') : 'N/A',
         checkOut: item.rec?.checkOutAt ? format(item.rec.checkOutAt, 'HH:mm:ss') : 'N/A',

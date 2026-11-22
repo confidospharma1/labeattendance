@@ -137,7 +137,9 @@ async function main() {
       maxReportLength: 500,
       gpsAccuracyWarnMetres: 100,
       gpsAccuracyRejectMetres: 200,
-      allowUnrestrictedFieldCheckin: true,
+      faceVerificationRequired: true,
+      faceMatchThreshold: 0.5,
+      lateAccessHours: 24,
       timezone: 'Asia/Kolkata',
       effectiveFrom: new Date(),
       createdById: primarySuperAdminId,
@@ -321,7 +323,7 @@ async function main() {
       },
     });
 
-    await prisma.employee.upsert({
+    const fieldEmp = await prisma.employee.upsert({
       where: { userId: fieldUser.id },
       update: { fullName: 'Ramesh Kumar' },
       create: {
@@ -335,6 +337,37 @@ async function main() {
         createdById: primaryAdminId || primarySuperAdminId,
       },
     });
+
+    // Sample route for today (IST) so field flow can be tested immediately
+    if (email === 'fieldstaff@labe.in') {
+      const ist = new Date(Date.now() + 5.5 * 3600_000);
+      const taskDate = new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate()));
+      const existingTasks = await prisma.fieldTask.count({ where: { employeeId: fieldEmp.id, taskDate } });
+      if (existingTasks === 0) {
+        const samples = [
+          { title: 'Visit Sri Sai Medicals - stock audit', locationName: 'Sri Sai Medicals, Kadapa', latitude: 14.4702, longitude: 78.8226, deadlineTime: '13:00' },
+          { title: 'Collect pending orders - RIMS Hospital pharmacy', locationName: 'RIMS Hospital, Kadapa', latitude: 14.4543, longitude: 78.8309, deadlineTime: '18:00' },
+        ];
+        for (const [i, t] of samples.entries()) {
+          await prisma.fieldTask.create({
+            data: {
+              organizationId: org.id,
+              employeeId: fieldEmp.id,
+              taskDate,
+              sequence: i + 1,
+              title: t.title,
+              description: 'Sample task created by seed. Replace with real tasks from the admin Task Planner.',
+              locationName: t.locationName,
+              latitude: t.latitude,
+              longitude: t.longitude,
+              radiusMetres: 150,
+              deadlineTime: t.deadlineTime,
+              assignedById: primaryAdminId || primarySuperAdminId,
+            },
+          });
+        }
+      }
+    }
   }
 
   console.log('✅ Field Staff ready: fieldstaff@labe.in');

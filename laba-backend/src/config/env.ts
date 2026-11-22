@@ -4,7 +4,9 @@ import fs from 'fs';
 import { z } from 'zod';
 
 // Load .env file reliably from current or parent directories
+// `.env.local` (git-ignored) takes priority so local testing never touches production.
 const candidates = [
+  path.resolve(process.cwd(), '.env.local'),
   path.resolve(process.cwd(), '.env'),
   path.resolve(__dirname, '../../.env'),
   path.resolve(__dirname, '../../../.env'),
@@ -29,7 +31,11 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().default('8h'),
   COOKIE_DOMAIN: z.string().optional(),
-  COOKIE_SECURE: z.coerce.boolean().default(false),
+  // z.coerce.boolean() would turn the string "false" into true
+  COOKIE_SECURE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
 
   // Rate Limiting

@@ -1,34 +1,15 @@
 import { z } from 'zod';
+import { gpsProofSchema, faceProofSchema } from './proof.schema';
 
 export const checkInSchema = z.object({
-  body: z.object({
-    latitude: z
-      .number({ required_error: 'Latitude is required' })
-      .min(-90, 'Latitude must be between -90 and 90')
-      .max(90, 'Latitude must be between -90 and 90'),
-    longitude: z
-      .number({ required_error: 'Longitude is required' })
-      .min(-180, 'Longitude must be between -180 and 180')
-      .max(180, 'Longitude must be between -180 and 180'),
-    accuracy: z
-      .number({ required_error: 'GPS Accuracy is required' })
-      .min(0, 'GPS accuracy must be a positive number'),
+  body: gpsProofSchema.extend({
+    face: faceProofSchema.optional(),
   }),
 });
 
 export const checkOutSchema = z.object({
-  body: z.object({
-    latitude: z
-      .number({ required_error: 'Latitude is required' })
-      .min(-90, 'Latitude must be between -90 and 90')
-      .max(90, 'Latitude must be between -90 and 90'),
-    longitude: z
-      .number({ required_error: 'Longitude is required' })
-      .min(-180, 'Longitude must be between -180 and 180')
-      .max(180, 'Longitude must be between -180 and 180'),
-    accuracy: z
-      .number({ required_error: 'GPS Accuracy is required' })
-      .min(0, 'GPS accuracy must be a positive number'),
+  body: gpsProofSchema.extend({
+    face: faceProofSchema.optional(),
     workReport: z
       .string({ required_error: 'Work report is mandatory for check-out' })
       .trim()
@@ -36,10 +17,7 @@ export const checkOutSchema = z.object({
         (val) => val.replace(/\s+/g, '').length >= 5,
         'Work report must contain at least 5 non-whitespace characters'
       )
-      .refine(
-        (val) => val.length <= 500,
-        'Work report must not exceed 500 characters'
-      ),
+      .refine((val) => val.length <= 1000, 'Work report must not exceed 1000 characters'),
   }),
 });
 

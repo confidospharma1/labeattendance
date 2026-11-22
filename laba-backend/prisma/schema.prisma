@@ -29,17 +29,26 @@ enum EmployeeType {
 }
 
 enum EmployeeStatus {
+  PENDING_APPROVAL // Self-registered, awaiting admin approval
   ACTIVE
+  REJECTED
   SUSPENDED
   DEACTIVATED
 }
 
-// Master instruction correction R-1: Explicit Schedule states
-enum ScheduleType {
-  LOCATION_ASSIGNED    // Enforce configured geofence
-  UNASSIGNED           // Explicitly permit attendance from any location under policy (record actual GPS)
-  WEEKLY_OFF           // Block attendance with weekly off notification
-  ATTENDANCE_DISABLED  // Explicitly disable attendance
+enum FieldTaskStatus {
+  PENDING // Assigned, not yet visited
+  VISITED // Staff checked in inside the task geofence
+  COMPLETED // Completion note submitted before the deadline
+  LATE_COMPLETED // Completed after deadline under admin-granted late access
+  CANCELLED
+}
+
+enum LateAccessStatus {
+  NONE
+  REQUESTED
+  APPROVED
+  REJECTED
 }
 
 enum AttendanceStatus {
@@ -52,8 +61,7 @@ enum AttendanceStatus {
 
 enum LocationRefType {
   BRANCH
-  FIELD_SCHEDULE
-  UNRESTRICTED
+  FIELD_TASK
 }
 
 enum CorrectionType {
@@ -81,14 +89,15 @@ model Organization {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  users                  User[]
-  branches               Branch[]
-  employees              Employee[]
-  attendancePolicies     AttendancePolicy[]
-  attendanceRecords      AttendanceRecord[]
-  holidays               Holiday[]
-  attendanceCorrections  AttendanceCorrection[]
-  auditLogs              AuditLog[]
+  users                 User[]
+  branches              Branch[]
+  employees             Employee[]
+  attendancePolicies    AttendancePolicy[]
+  attendanceRecords     AttendanceRecord[]
+  holidays              Holiday[]
+  attendanceCorrections AttendanceCorrection[]
+  auditLogs             AuditLog[]
+  fieldTasks            FieldTask[]
 
   @@map("organizations")
 }
@@ -107,10 +116,12 @@ model User {
   updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt           DateTime? @map("deleted_at") @db.Timestamptz
 
-  organization             Organization          @relation(fields: [organizationId], references: [id])
+  organization             Organization           @relation(fields: [organizationId], references: [id])
   employee                 Employee?
   createdBranchAssignments BranchAssignment[]     @relation("AssignedBy")
-  createdSchedules         FieldStaffSchedule[]   @relation("ScheduleAssignedBy")
+  assignedTasks            FieldTask[]            @relation("TaskAssignedBy")
+  lateAccessReviews        FieldTask[]            @relation("LateAccessReviewedBy")
+  approvedEmployees        Employee[]             @relation("ApprovedBy")
   createdPolicies          AttendancePolicy[]     @relation("PolicyCreatedBy")
   reviewedCorrections      AttendanceCorrection[] @relation("ReviewedBy")
   requestedCorrections     AttendanceCorrection[] @relation("RequestedBy")
@@ -124,26 +135,32 @@ model User {
 }
 
 model Employee {
-  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId         String         @unique @map("user_id") @db.Uuid
-  organizationId String         @map("organization_id") @db.Uuid
-  employeeCode   String         @unique @map("employee_code") @db.VarChar(20)
-  contactId      String?        @map("contact_id") @db.VarChar(50)
-  fullName       String         @map("full_name") @db.VarChar(255)
-  mobile         String         @db.VarChar(15)
-  employeeType   EmployeeType   @map("employee_type")
-  status         EmployeeStatus @default(ACTIVE)
-  profileNotes   String?        @map("profile_notes") @db.Text
-  createdById    String         @map("created_by") @db.Uuid
-  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt      DateTime?      @map("deleted_at") @db.Timestamptz
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String         @unique @map("user_id") @db.Uuid
+  organizationId  String         @map("organization_id") @db.Uuid
+  employeeCode    String         @unique @map("employee_code") @db.VarChar(20)
+  contactId       String?        @map("contact_id") @db.VarChar(50)
+  fullName        String         @map("full_name") @db.VarChar(255)
+  mobile          String         @db.VarChar(15)
+  employeeType    EmployeeType   @map("employee_type")
+  status          EmployeeStatus @default(ACTIVE)
+  profileNotes    String?        @map("profile_notes") @db.Text
+  selfRegistered  Boolean        @default(false) @map("self_registered")
+  approvedById    String?        @map("approved_by") @db.Uuid
+  approvedAt      DateTime?      @map("approved_at") @db.Timestamptz
+  rejectionReason String?        @map("rejection_reason") @db.Text
+  createdById     String         @map("created_by") @db.Uuid
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime?      @map("deleted_at") @db.Timestamptz
 
   user                  User                   @relation(fields: [userId], references: [id])
   organization          Organization           @relation(fields: [organizationId], references: [id])
   createdBy             User                   @relation("CreatedBy", fields: [createdById], references: [id])
+  approvedBy            User?                  @relation("ApprovedBy", fields: [approvedById], references: [id])
   branchAssignments     BranchAssignment[]
-  fieldSchedules        FieldStaffSchedule[]
+  fieldTasks            FieldTask[]
+  faceProfile           FaceProfile?
   attendanceRecords     AttendanceRecord[]
   attendanceCorrections AttendanceCorrection[]
   managedBranches       Branch[]               @relation("BranchManager")
@@ -202,50 +219,105 @@ model BranchAssignment {
   @@map("branch_assignments")
 }
 
-model FieldStaffSchedule {
-  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  employeeId           String       @map("employee_id") @db.Uuid
-  scheduleDate         DateTime     @map("schedule_date") @db.Date
-  scheduleType         ScheduleType @map("schedule_type")
-  locationName         String?      @map("location_name") @db.VarChar(255)
-  address              String?      @db.Text
-  latitude             Decimal?     @db.Decimal(10, 7)
-  longitude            Decimal?     @db.Decimal(10, 7)
-  geofenceRadiusMetres Int?         @map("geofence_radius_metres")
-  attendanceEnabled    Boolean      @default(true) @map("attendance_enabled")
-  notes                String?      @db.Text
-  assignedById         String       @map("assigned_by") @db.Uuid
-  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+// A single task / stop on a field staff member's daily route.
+// Field attendance is proven by visiting each task location inside its
+// admin-defined radius (metres) before the task deadline.
+model FieldTask {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String          @map("organization_id") @db.Uuid
+  employeeId     String          @map("employee_id") @db.Uuid
+  taskDate       DateTime        @map("task_date") @db.Date
+  sequence       Int             @default(1)
+  title          String          @db.VarChar(255)
+  description    String?         @db.Text
+  locationName   String          @map("location_name") @db.VarChar(255)
+  address        String?         @db.Text
+  latitude       Decimal         @db.Decimal(10, 7)
+  longitude      Decimal         @db.Decimal(10, 7)
+  radiusMetres   Int             @default(100) @map("radius_metres")
+  deadlineTime   String          @map("deadline_time") @db.VarChar(5) // HH:MM IST on taskDate
+  status         FieldTaskStatus @default(PENDING)
 
-  employee   Employee @relation(fields: [employeeId], references: [id])
-  assignedBy User     @relation("ScheduleAssignedBy", fields: [assignedById], references: [id])
+  // Visit (location check-in) proof
+  visitedAt           DateTime? @map("visited_at") @db.Timestamptz
+  visitLat            Decimal?  @map("visit_lat") @db.Decimal(10, 7)
+  visitLng            Decimal?  @map("visit_lng") @db.Decimal(10, 7)
+  visitAccuracyMetres Decimal?  @map("visit_accuracy_metres") @db.Decimal(8, 2)
+  visitDistanceMetres Decimal?  @map("visit_distance_metres") @db.Decimal(10, 2)
+  visitFaceScore      Float?    @map("visit_face_score")
+  visitSelfie         String?   @map("visit_selfie") @db.Text
+  visitIsMockLocation Boolean?  @map("visit_is_mock_location")
 
-  @@unique([employeeId, scheduleDate])
-  @@index([employeeId, scheduleDate])
-  @@map("field_staff_schedules")
+  // Completion proof
+  completionNote         String?   @map("completion_note") @db.Text
+  completedAt            DateTime? @map("completed_at") @db.Timestamptz
+  completeLat            Decimal?  @map("complete_lat") @db.Decimal(10, 7)
+  completeLng            Decimal?  @map("complete_lng") @db.Decimal(10, 7)
+  completeDistanceMetres Decimal?  @map("complete_distance_metres") @db.Decimal(10, 2)
+
+  // Late access: work after the deadline needs admin approval
+  lateAccessStatus  LateAccessStatus @default(NONE) @map("late_access_status")
+  lateRequestReason String?          @map("late_request_reason") @db.Text
+  lateRequestedAt   DateTime?        @map("late_requested_at") @db.Timestamptz
+  lateReviewedById  String?          @map("late_reviewed_by") @db.Uuid
+  lateReviewedAt    DateTime?        @map("late_reviewed_at") @db.Timestamptz
+  lateReviewNote    String?          @map("late_review_note") @db.Text
+  lateAccessUntil   DateTime?        @map("late_access_until") @db.Timestamptz
+
+  assignedById String   @map("assigned_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  employee       Employee     @relation(fields: [employeeId], references: [id])
+  assignedBy     User         @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+  lateReviewedBy User?        @relation("LateAccessReviewedBy", fields: [lateReviewedById], references: [id])
+
+  @@index([employeeId, taskDate])
+  @@index([organizationId, taskDate])
+  @@index([organizationId, lateAccessStatus])
+  @@map("field_tasks")
+}
+
+// Enrolled face template. Descriptors are computed on the phone by
+// @vladmandic/human and compared on the server.
+model FaceProfile {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeId   String   @unique @map("employee_id") @db.Uuid
+  embeddings   Json // number[][]: one descriptor per enrolment sample
+  photo        String   @db.Text // small JPEG data URL for admin review
+  modelVersion String   @map("model_version") @db.VarChar(50)
+  consentAt    DateTime @map("consent_at") @db.Timestamptz
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("face_profiles")
 }
 
 model AttendancePolicy {
-  id                            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId                String   @map("organization_id") @db.Uuid
-  version                       Int
-  isCurrent                     Boolean  @default(true) @map("is_current")
-  morningStart                  String   @map("morning_start") @db.VarChar(5) // Format HH:MM e.g. "09:00"
-  morningEnd                    String   @map("morning_end") @db.VarChar(5)   // Format HH:MM e.g. "09:20"
-  eveningStart                  String   @map("evening_start") @db.VarChar(5) // Format HH:MM e.g. "16:30"
-  eveningEnd                    String   @map("evening_end") @db.VarChar(5)   // Format HH:MM e.g. "17:00"
-  defaultGeofenceRadiusMetres   Int      @default(100) @map("default_geofence_radius_metres")
-  minReportLength               Int      @default(5) @map("min_report_length")
-  maxReportLength               Int      @default(500) @map("max_report_length")
-  gpsAccuracyWarnMetres         Int      @default(100) @map("gps_accuracy_warn_metres")
-  gpsAccuracyRejectMetres       Int      @default(200) @map("gps_accuracy_reject_metres")
-  allowUnrestrictedFieldCheckin Boolean  @default(true) @map("allow_unrestricted_field_checkin")
-  timezone                      String   @default("Asia/Kolkata") @db.VarChar(50)
-  effectiveFrom                 DateTime @map("effective_from") @db.Date
-  notes                         String?  @db.Text
-  createdById                   String   @map("created_by") @db.Uuid
-  createdAt                     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id                          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId              String   @map("organization_id") @db.Uuid
+  version                     Int
+  isCurrent                   Boolean  @default(true) @map("is_current")
+  morningStart                String   @map("morning_start") @db.VarChar(5) // Format HH:MM e.g. "09:00"
+  morningEnd                  String   @map("morning_end") @db.VarChar(5) // Format HH:MM e.g. "09:20"
+  eveningStart                String   @map("evening_start") @db.VarChar(5) // Format HH:MM e.g. "16:30"
+  eveningEnd                  String   @map("evening_end") @db.VarChar(5) // Format HH:MM e.g. "17:00"
+  defaultGeofenceRadiusMetres Int      @default(100) @map("default_geofence_radius_metres")
+  minReportLength             Int      @default(5) @map("min_report_length")
+  maxReportLength             Int      @default(500) @map("max_report_length")
+  gpsAccuracyWarnMetres       Int      @default(100) @map("gps_accuracy_warn_metres")
+  gpsAccuracyRejectMetres     Int      @default(200) @map("gps_accuracy_reject_metres")
+  faceVerificationRequired    Boolean  @default(true) @map("face_verification_required")
+  faceMatchThreshold          Float    @default(0.5) @map("face_match_threshold")
+  lateAccessHours             Int      @default(24) @map("late_access_hours")
+  timezone                    String   @default("Asia/Kolkata") @db.VarChar(50)
+  effectiveFrom               DateTime @map("effective_from") @db.Date
+  notes                       String?  @db.Text
+  createdById                 String   @map("created_by") @db.Uuid
+  createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   organization      Organization       @relation(fields: [organizationId], references: [id])
   createdBy         User               @relation("PolicyCreatedBy", fields: [createdById], references: [id])
@@ -257,13 +329,13 @@ model AttendancePolicy {
 }
 
 model AttendanceRecord {
-  id                     String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  employeeId             String           @map("employee_id") @db.Uuid
-  organizationId         String           @map("organization_id") @db.Uuid
-  workDate               DateTime         @map("work_date") @db.Date
-  policyVersionId        String           @map("policy_version_id") @db.Uuid
-  status                 AttendanceStatus @default(CHECKED_IN)
-  
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeId      String           @map("employee_id") @db.Uuid
+  organizationId  String           @map("organization_id") @db.Uuid
+  workDate        DateTime         @map("work_date") @db.Date
+  policyVersionId String           @map("policy_version_id") @db.Uuid
+  status          AttendanceStatus @default(CHECKED_IN)
+
   // Check-In Details
   checkInAt              DateTime?        @map("check_in_at") @db.Timestamptz
   checkInLat             Decimal?         @map("check_in_lat") @db.Decimal(10, 7)
@@ -274,6 +346,9 @@ model AttendanceRecord {
   checkInLocationRefId   String?          @map("check_in_location_ref_id") @db.Uuid
   checkInLocationRefType LocationRefType? @map("check_in_location_ref_type")
   checkInLocationName    String?          @map("check_in_location_name") @db.VarChar(255)
+  checkInFaceScore       Float?           @map("check_in_face_score")
+  checkInSelfie          String?          @map("check_in_selfie") @db.Text
+  checkInIsMockLocation  Boolean?         @map("check_in_is_mock_location")
 
   // Check-Out Details (Master instruction correction R-3: Dual snapshot preservation)
   checkOutAt              DateTime?        @map("check_out_at") @db.Timestamptz
@@ -285,18 +360,20 @@ model AttendanceRecord {
   checkOutLocationRefId   String?          @map("check_out_location_ref_id") @db.Uuid
   checkOutLocationRefType LocationRefType? @map("check_out_location_ref_type")
   checkOutLocationName    String?          @map("check_out_location_name") @db.VarChar(255)
+  checkOutFaceScore       Float?           @map("check_out_face_score")
+  checkOutSelfie          String?          @map("check_out_selfie") @db.Text
 
   // Work Report & Admin Flags
-  workReport             String?          @map("work_report") @db.Text
-  isCorrected            Boolean          @default(false) @map("is_corrected")
-  isAdminCreated         Boolean          @default(false) @map("is_admin_created")
-  createdAt              DateTime         @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt              DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+  workReport     String?  @map("work_report") @db.Text
+  isCorrected    Boolean  @default(false) @map("is_corrected")
+  isAdminCreated Boolean  @default(false) @map("is_admin_created")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  employee              Employee               @relation(fields: [employeeId], references: [id])
-  organization          Organization           @relation(fields: [organizationId], references: [id])
-  policyVersion         AttendancePolicy       @relation(fields: [policyVersionId], references: [id])
-  corrections           AttendanceCorrection[]
+  employee      Employee               @relation(fields: [employeeId], references: [id])
+  organization  Organization           @relation(fields: [organizationId], references: [id])
+  policyVersion AttendancePolicy       @relation(fields: [policyVersionId], references: [id])
+  corrections   AttendanceCorrection[]
 
   @@unique([employeeId, workDate])
   @@index([organizationId, workDate])
@@ -372,4 +449,3 @@ model Holiday {
   @@index([organizationId, holidayDate])
   @@map("holidays")
 }
-

@@ -1,9 +1,12 @@
 import { prisma } from '../config/database';
 import { AppError } from '../utils/AppError';
 import { geofenceService } from './geofence.service';
-import { getISTWorkDate, isWithinISTWindow, getISTCurrentMinutes, timeStringToMinutes } from '../utils/timeWindows';
+import { faceService } from './face.service';
+import { getISTWorkDate, isWithinISTWindow, getISTCurrentMinutes, timeStringToMinutes, istDateTimeFromWorkDate } from '../utils/timeWindows';
 import { CheckInInput, CheckOutInput, RequestCorrectionInput, ReviewCorrectionInput } from '../schemas/attendance.schema';
-import { AttendanceStatus, CorrectionStatus, EmployeeStatus } from '@prisma/client';
+import { AttendanceStatus, CorrectionStatus, EmployeeStatus, AttendancePolicy } from '@prisma/client';
+
+const STAFF_TYPES = ['OFFICE_STAFF', 'FIELD_STAFF'] as const;
 
 export class AttendanceService {
   /**
@@ -50,71 +53,58 @@ export class AttendanceService {
     return policy;
   }
 
+  /** Face check shared by every attendance action. Returns the match score (or null when disabled). */
+  async verifyFace(employeeId: string, policy: AttendancePolicy, face: CheckInInput['face']) {
+    if (!policy.faceVerificationRequired) return null;
+    return faceService.verify(employeeId, face, policy.faceMatchThreshold);
+  }
+
+  private assertOfficeStaff(employeeType: string) {
+    if (employeeType === 'FIELD_STAFF') {
+      throw new AppError(
+        'Field staff mark attendance by checking in at each assigned task location.',
+        400,
+        'USE_FIELD_TASKS'
+      );
+    }
+    if (employeeType !== 'OFFICE_STAFF') {
+      throw new AppError('Only office staff use branch check-in.', 400, 'NOT_OFFICE_STAFF');
+    }
+  }
+
   /**
-   * Morning Check-In with Server Time, Policy Window, and Geofence Verification.
+   * Office morning check-in: time window + branch geofence + face verification.
    */
-  async checkIn(
-    userId: string,
-    input: CheckInInput,
-    ipAddress?: string,
-    userAgent?: string
-  ) {
+  async checkIn(userId: string, input: CheckInInput, ipAddress?: string, userAgent?: string) {
     const employee = await this.getEmployeeByUserId(userId);
+    this.assertOfficeStaff(employee.employeeType);
     const policy = await this.getActivePolicy(employee.organizationId);
 
-    // 1. Authoritative Server Time Window Verification
     const now = new Date();
     const windowCheck = isWithinISTWindow(policy.morningStart, policy.morningEnd, now);
     if (!windowCheck.inWindow) {
       throw new AppError(
-        `Check-in is permitted only between ${policy.morningStart} and ${policy.morningEnd} IST. (Current IST time is outside this window).`,
+        `Check-in is allowed only between ${policy.morningStart} and ${policy.morningEnd} IST.`,
         400,
         'OUTSIDE_CHECKIN_WINDOW'
       );
     }
 
-    // 2. GPS Accuracy Verification
-    if (input.accuracy > policy.gpsAccuracyRejectMetres) {
-      throw new AppError(
-        `Reported GPS accuracy (${Math.round(input.accuracy)}m) exceeds allowable threshold (${policy.gpsAccuracyRejectMetres}m). Please stand near an open window or outdoor location.`,
-        400,
-        'POOR_GPS_ACCURACY'
-      );
-    }
+    geofenceService.assertGpsQuality(input, policy.gpsAccuracyRejectMetres);
 
-    // 3. Normalized Work Date (Midnight UTC in IST)
     const workDate = getISTWorkDate(now);
-
-    // 4. Duplicate Check-in Prevention
     const existing = await prisma.attendanceRecord.findUnique({
-      where: {
-        employeeId_workDate: {
-          employeeId: employee.id,
-          workDate,
-        },
-      },
+      where: { employeeId_workDate: { employeeId: employee.id, workDate } },
     });
-
     if (existing) {
-      throw new AppError('You have already recorded check-in for today.', 409, 'ALREADY_CHECKED_IN');
+      throw new AppError('You have already checked in today.', 409, 'ALREADY_CHECKED_IN');
     }
 
-    // 5. Geofence and Location Enforcement
-    const enforcement = await geofenceService.resolveLocationEnforcement(
-      employee.id,
-      employee.employeeType,
-      workDate,
-      employee.organizationId
-    );
+    const target = await geofenceService.resolveOfficeBranch(employee.id, employee.organizationId);
+    const geoResult = geofenceService.assertInside(target, input);
+    const faceScore = await this.verifyFace(employee.id, policy, input.face);
 
-    const geoResult = geofenceService.validateAttendanceLocation(
-      enforcement,
-      input.latitude,
-      input.longitude
-    );
-
-    // 6. Atomic Transaction for Record Creation + Audit Log
-    return await prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx) => {
       const record = await tx.attendanceRecord.create({
         data: {
           employeeId: employee.id,
@@ -126,11 +116,14 @@ export class AttendanceService {
           checkInLat: input.latitude,
           checkInLng: input.longitude,
           checkInAccuracyMetres: input.accuracy,
-          checkInGeofenceValid: geoResult.insideGeofence,
+          checkInGeofenceValid: true,
           checkInDistanceMetres: geoResult.distanceMetres,
-          checkInLocationRefId: enforcement.refId,
-          checkInLocationRefType: enforcement.type,
-          checkInLocationName: enforcement.refName,
+          checkInLocationRefId: target.refId,
+          checkInLocationRefType: target.type,
+          checkInLocationName: target.refName,
+          checkInFaceScore: faceScore,
+          checkInSelfie: input.face?.selfie ?? null,
+          checkInIsMockLocation: input.isMockLocation ?? null,
         },
       });
 
@@ -142,97 +135,57 @@ export class AttendanceService {
           action: 'ATTENDANCE_CHECK_IN',
           entityType: 'AttendanceRecord',
           entityId: record.id,
-          afterState: JSON.parse(JSON.stringify(record)),
           ipAddress: ipAddress || null,
           userAgent: userAgent || null,
           metadata: {
             distanceMetres: geoResult.distanceMetres,
-            allowedRadius: enforcement.radiusMetres,
-            location: enforcement.refName,
+            allowedRadius: target.radiusMetres,
+            location: target.refName,
+            faceScore,
           },
         },
       });
 
-      return {
-        record,
-        enforcement,
-        geoResult,
-      };
+      return { record: this.stripSelfies(record), target, geoResult, faceScore };
     });
   }
 
   /**
-   * Evening Check-Out with Work Report, Server Time, and Geofence Verification.
+   * Office evening check-out: time window + branch geofence + face + work report.
    */
-  async checkOut(
-    userId: string,
-    input: CheckOutInput,
-    ipAddress?: string,
-    userAgent?: string
-  ) {
+  async checkOut(userId: string, input: CheckOutInput, ipAddress?: string, userAgent?: string) {
     const employee = await this.getEmployeeByUserId(userId);
+    this.assertOfficeStaff(employee.employeeType);
     const policy = await this.getActivePolicy(employee.organizationId);
 
-    // 1. Authoritative Server Time Window Verification
     const now = new Date();
     const windowCheck = isWithinISTWindow(policy.eveningStart, policy.eveningEnd, now);
     if (!windowCheck.inWindow) {
       throw new AppError(
-        `Check-out is permitted only between ${policy.eveningStart} and ${policy.eveningEnd} IST. (Current IST time is outside this window).`,
+        `Check-out is allowed only between ${policy.eveningStart} and ${policy.eveningEnd} IST.`,
         400,
         'OUTSIDE_CHECKOUT_WINDOW'
       );
     }
 
-    // 2. GPS Accuracy Verification
-    if (input.accuracy > policy.gpsAccuracyRejectMetres) {
-      throw new AppError(
-        `Reported GPS accuracy (${Math.round(input.accuracy)}m) exceeds allowable threshold (${policy.gpsAccuracyRejectMetres}m).`,
-        400,
-        'POOR_GPS_ACCURACY'
-      );
-    }
+    geofenceService.assertGpsQuality(input, policy.gpsAccuracyRejectMetres);
 
     const workDate = getISTWorkDate(now);
-
-    // 3. Verify Existing Check-in
     const existing = await prisma.attendanceRecord.findUnique({
-      where: {
-        employeeId_workDate: {
-          employeeId: employee.id,
-          workDate,
-        },
-      },
+      where: { employeeId_workDate: { employeeId: employee.id, workDate } },
     });
-
-    if (!existing || !existing.checkInAt) {
-      throw new AppError(
-        'Cannot check out without an active morning check-in record for today.',
-        400,
-        'NO_CHECKIN_FOUND'
-      );
+    if (!existing?.checkInAt) {
+      throw new AppError('You cannot check out without checking in this morning.', 400, 'NO_CHECKIN_FOUND');
     }
-
     if (existing.checkOutAt) {
-      throw new AppError('You have already recorded check-out for today.', 409, 'ALREADY_CHECKED_OUT');
+      throw new AppError('You have already checked out today.', 409, 'ALREADY_CHECKED_OUT');
     }
 
-    // 4. Resolve Evening Geofence Boundary (Dual Snapshot preservation)
-    const enforcement = await geofenceService.resolveLocationEnforcement(
-      employee.id,
-      employee.employeeType,
-      workDate,
-      employee.organizationId
-    );
+    const target = await geofenceService.resolveOfficeBranch(employee.id, employee.organizationId);
+    const geoResult = geofenceService.assertInside(target, input);
+    const faceScore = await this.verifyFace(employee.id, policy, input.face);
 
-    const geoResult = geofenceService.validateAttendanceLocation(
-      enforcement,
-      input.latitude,
-      input.longitude
-    );
-
-    // 5. Atomic Transaction: Update Record to CHECKED_OUT + Audit Log
-    return await prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx) => {
       const updated = await tx.attendanceRecord.update({
         where: { id: existing.id },
         data: {
@@ -241,11 +194,13 @@ export class AttendanceService {
           checkOutLat: input.latitude,
           checkOutLng: input.longitude,
           checkOutAccuracyMetres: input.accuracy,
-          checkOutGeofenceValid: geoResult.insideGeofence,
+          checkOutGeofenceValid: true,
           checkOutDistanceMetres: geoResult.distanceMetres,
-          checkOutLocationRefId: enforcement.refId,
-          checkOutLocationRefType: enforcement.type,
-          checkOutLocationName: enforcement.refName,
+          checkOutLocationRefId: target.refId,
+          checkOutLocationRefType: target.type,
+          checkOutLocationName: target.refName,
+          checkOutFaceScore: faceScore,
+          checkOutSelfie: input.face?.selfie ?? null,
           workReport: input.workReport.trim(),
         },
       });
@@ -258,27 +213,28 @@ export class AttendanceService {
           action: 'ATTENDANCE_CHECK_OUT',
           entityType: 'AttendanceRecord',
           entityId: updated.id,
-          beforeState: JSON.parse(JSON.stringify(existing)),
-          afterState: JSON.parse(JSON.stringify(updated)),
           ipAddress: ipAddress || null,
           userAgent: userAgent || null,
           metadata: {
             distanceMetres: geoResult.distanceMetres,
             workReportLength: input.workReport.trim().length,
+            faceScore,
           },
         },
       });
 
-      return {
-        record: updated,
-        enforcement,
-        geoResult,
-      };
+      return { record: this.stripSelfies(updated), target, geoResult, faceScore };
     });
   }
 
+  /** Selfies are large; only return them on explicit admin request. */
+  stripSelfies<T extends { checkInSelfie?: string | null; checkOutSelfie?: string | null }>(record: T) {
+    const { checkInSelfie, checkOutSelfie, ...rest } = record;
+    return { ...rest, hasCheckInSelfie: !!checkInSelfie, hasCheckOutSelfie: !!checkOutSelfie };
+  }
+
   /**
-   * Get employee's attendance status and time window states for today.
+   * Today's status for the staff home screen.
    */
   async getTodayStatus(userId: string) {
     const employee = await this.getEmployeeByUserId(userId);
@@ -288,38 +244,26 @@ export class AttendanceService {
     const workDate = getISTWorkDate(now);
     const currentMinutes = getISTCurrentMinutes(now);
 
-    const morningStart = timeStringToMinutes(policy.morningStart);
-    const morningEnd = timeStringToMinutes(policy.morningEnd);
-    const eveningStart = timeStringToMinutes(policy.eveningStart);
-    const eveningEnd = timeStringToMinutes(policy.eveningEnd);
+    const inMorningWindow =
+      currentMinutes >= timeStringToMinutes(policy.morningStart) && currentMinutes <= timeStringToMinutes(policy.morningEnd);
+    const inEveningWindow =
+      currentMinutes >= timeStringToMinutes(policy.eveningStart) && currentMinutes <= timeStringToMinutes(policy.eveningEnd);
 
-    const inMorningWindow = currentMinutes >= morningStart && currentMinutes <= morningEnd;
-    const inEveningWindow = currentMinutes >= eveningStart && currentMinutes <= eveningEnd;
-
-    // Check today's record
     const todayRecord = await prisma.attendanceRecord.findUnique({
-      where: {
-        employeeId_workDate: {
-          employeeId: employee.id,
-          workDate,
-        },
-      },
+      where: { employeeId_workDate: { employeeId: employee.id, workDate } },
     });
 
-    // Try resolving today's enforcement
-    let enforcement = null;
-    let enforcementError: string | null = null;
-
-    try {
-      enforcement = await geofenceService.resolveLocationEnforcement(
-        employee.id,
-        employee.employeeType,
-        workDate,
-        employee.organizationId
-      );
-    } catch (err: any) {
-      enforcementError = err.message || 'Unable to resolve duty location.';
+    let target = null;
+    let targetError: string | null = null;
+    if (employee.employeeType === 'OFFICE_STAFF') {
+      try {
+        target = await geofenceService.resolveOfficeBranch(employee.id, employee.organizationId);
+      } catch (err: any) {
+        targetError = err.message || 'Unable to resolve your branch.';
+      }
     }
+
+    const face = await faceService.getStatus(employee.id);
 
     return {
       serverTime: now.toISOString(),
@@ -336,16 +280,20 @@ export class AttendanceService {
         eveningStart: policy.eveningStart,
         eveningEnd: policy.eveningEnd,
         gpsAccuracyRejectMetres: policy.gpsAccuracyRejectMetres,
+        faceVerificationRequired: policy.faceVerificationRequired,
+        minReportLength: policy.minReportLength,
       },
       windows: {
         inMorningWindow,
         inEveningWindow,
-        canCheckIn: inMorningWindow && !todayRecord,
-        canCheckOut: inEveningWindow && !!todayRecord?.checkInAt && !todayRecord?.checkOutAt,
+        canCheckIn: employee.employeeType === 'OFFICE_STAFF' && inMorningWindow && !todayRecord,
+        canCheckOut:
+          employee.employeeType === 'OFFICE_STAFF' && inEveningWindow && !!todayRecord?.checkInAt && !todayRecord?.checkOutAt,
       },
-      todayRecord,
-      enforcement,
-      enforcementError,
+      todayRecord: todayRecord ? this.stripSelfies(todayRecord) : null,
+      target,
+      targetError,
+      face,
     };
   }
 
@@ -362,6 +310,7 @@ export class AttendanceService {
         orderBy: { workDate: 'desc' },
         skip,
         take: limit,
+
         include: {
           corrections: true,
         },
@@ -372,7 +321,7 @@ export class AttendanceService {
     ]);
 
     return {
-      records,
+      records: records.map((r) => this.stripSelfies(r)),
       meta: {
         page,
         limit,
@@ -381,7 +330,6 @@ export class AttendanceService {
       },
     };
   }
-
   /**
    * Request attendance correction (for missed check-in/out or location issues).
    */
@@ -415,6 +363,7 @@ export class AttendanceService {
         employeeReason: input.employeeReason,
         requestedById: userId,
         correctedState: {
+          workDate: input.workDate,
           proposedCheckIn: input.proposedCheckIn,
           proposedCheckOut: input.proposedCheckOut,
           proposedWorkReport: input.proposedWorkReport,
@@ -458,19 +407,38 @@ export class AttendanceService {
         },
       });
 
-      // If approved, update or create the attendance record
+      // If approved, apply the proposed times / report to the attendance record
       if (input.status === 'APPROVED') {
         const state = (correction.correctedState as any) || {};
+        const workDate = correction.attendanceRecord?.workDate ?? (state.workDate ? new Date(`${state.workDate}T00:00:00.000Z`) : null);
+        const proposedIn = workDate && state.proposedCheckIn ? istDateTimeFromWorkDate(workDate, state.proposedCheckIn) : undefined;
+        const proposedOut = workDate && state.proposedCheckOut ? istDateTimeFromWorkDate(workDate, state.proposedCheckOut) : undefined;
+        const patch = {
+          status: AttendanceStatus.CORRECTED,
+          isCorrected: true,
+          ...(proposedIn ? { checkInAt: proposedIn } : {}),
+          ...(proposedOut ? { checkOutAt: proposedOut } : {}),
+          ...(state.proposedWorkReport ? { workReport: state.proposedWorkReport } : {}),
+        };
 
         if (correction.attendanceRecordId) {
-          await tx.attendanceRecord.update({
-            where: { id: correction.attendanceRecordId },
+          await tx.attendanceRecord.update({ where: { id: correction.attendanceRecordId }, data: patch });
+        } else if (workDate) {
+          const policy = await tx.attendancePolicy.findFirst({
+            where: { organizationId: correction.organizationId, isCurrent: true },
+          });
+          if (!policy) throw new AppError('No active attendance policy.', 500, 'POLICY_NOT_FOUND');
+          const created = await tx.attendanceRecord.create({
             data: {
-              status: AttendanceStatus.CORRECTED,
-              isCorrected: true,
-              ...(state.proposedWorkReport ? { workReport: state.proposedWorkReport } : {}),
+              employeeId: correction.employeeId,
+              organizationId: correction.organizationId,
+              workDate,
+              policyVersionId: policy.id,
+              isAdminCreated: true,
+              ...patch,
             },
           });
+          await tx.attendanceCorrection.update({ where: { id: correctionId }, data: { attendanceRecordId: created.id } });
         }
       }
 
@@ -503,6 +471,8 @@ export class AttendanceService {
       where: {
         organizationId,
         status: EmployeeStatus.ACTIVE,
+        employeeType: { in: [...STAFF_TYPES] },
+        deletedAt: null,
       },
     });
 
@@ -537,7 +507,13 @@ export class AttendanceService {
       checkedInOnlyCount: checkedInCount,
       checkedOutCount,
       correctedCount,
-      recordsSummary: records.slice(0, 10),
+      pendingApprovals: await prisma.employee.count({
+        where: { organizationId, status: EmployeeStatus.PENDING_APPROVAL, deletedAt: null },
+      }),
+      pendingLateRequests: await prisma.fieldTask.count({
+        where: { organizationId, lateAccessStatus: 'REQUESTED' },
+      }),
+      recordsSummary: records.slice(0, 10).map((r) => this.stripSelfies(r)),
     };
   }
 
@@ -668,7 +644,7 @@ export class AttendanceService {
    */
   async getAnalytics(organizationId: string, days = 7) {
     const totalActiveEmployees = await prisma.employee.count({
-      where: { organizationId, status: EmployeeStatus.ACTIVE },
+      where: { organizationId, status: EmployeeStatus.ACTIVE, employeeType: { in: [...STAFF_TYPES] }, deletedAt: null },
     });
 
     const branches = await prisma.branch.findMany({
@@ -683,9 +659,8 @@ export class AttendanceService {
 
     // Determine date range in IST
     const now = new Date();
-    const startDate = new Date();
-    startDate.setDate(now.getDate() - (days - 1));
-    startDate.setHours(0, 0, 0, 0);
+    const todayIST = getISTWorkDate(now);
+    const startDate = new Date(todayIST.getTime() - (days - 1) * 86400000);
 
     const records = await prisma.attendanceRecord.findMany({
       where: {
@@ -711,7 +686,7 @@ export class AttendanceService {
     const dayMap = new Map<string, typeof records>();
     for (let i = 0; i < days; i++) {
       const d = new Date(startDate);
-      d.setDate(d.getDate() + i);
+      d.setUTCDate(d.getUTCDate() + i);
       const key = d.toISOString().slice(0, 10);
       dayMap.set(key, []);
     }
@@ -737,7 +712,7 @@ export class AttendanceService {
       const totalPresent = officePresent + fieldPresent;
       const reportCount = dayRecords.filter((r) => !!r.workReport).length;
       const geofenceValidCount = dayRecords.filter(
-        (r) => r.checkInGeofenceValid === true || r.checkInLocationRefType === 'UNRESTRICTED'
+        (r) => r.checkInGeofenceValid === true
       ).length;
 
       const rate = totalActiveEmployees > 0 ? Math.round((totalPresent / totalActiveEmployees) * 100) : 0;
@@ -761,7 +736,7 @@ export class AttendanceService {
       const branchStaffIds = new Set(b.assignments.map((a) => a.employeeId));
 
       const branchRecordsToday = (records || []).filter((r) => {
-        const isToday = r.workDate.toISOString().slice(0, 10) === now.toISOString().slice(0, 10);
+        const isToday = r.workDate.toISOString().slice(0, 10) === todayIST.toISOString().slice(0, 10);
         return isToday && branchStaffIds.has(r.employeeId);
       });
 
@@ -790,7 +765,7 @@ export class AttendanceService {
     const totalRecords = records.length;
     const totalWithReports = records.filter((r) => !!r.workReport).length;
     const totalGeofenceValid = records.filter(
-      (r) => r.checkInGeofenceValid === true || r.checkInLocationRefType === 'UNRESTRICTED'
+      (r) => r.checkInGeofenceValid === true
     ).length;
 
     const avgRate =

@@ -61,10 +61,11 @@ export class ReportController {
           where: {
             organizationId: req.user!.organizationId,
             status: EmployeeStatus.ACTIVE,
+            employeeType: { in: ['OFFICE_STAFF', 'FIELD_STAFF'] },
           },
           include: {
             branchAssignments: { where: { isCurrent: true }, include: { branch: true } },
-            fieldSchedules: { where: { scheduleDate: workDate } },
+            fieldTasks: { where: { taskDate: workDate }, select: { id: true, title: true, status: true } },
           },
         }),
         prisma.attendanceRecord.findMany({

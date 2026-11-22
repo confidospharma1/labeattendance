@@ -337,8 +337,11 @@ export class EmployeeService {
         where: { employeeId },
       });
 
-      // 4. Delete field staff schedules
-      await tx.fieldStaffSchedule.deleteMany({
+      // 4. Delete field tasks and face profile
+      await tx.fieldTask.deleteMany({
+        where: { employeeId },
+      });
+      await tx.faceProfile.deleteMany({
         where: { employeeId },
       });
 
