@@ -44,15 +44,15 @@ export function LateRequestsPanel({ onChanged }: { onChanged: () => void }) {
   };
 
   return (
-    <section className="bg-white border border-[#E5E5E5] rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-[#E5E5E5] flex flex-wrap items-center justify-between gap-2">
+    <section className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden">
+      <div className="px-4 py-3 border-b border-[#E2E8F0] flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-bold text-sm text-[#171717]">Late task access</h3>
-          <p className="text-xs text-[#737373]">Field staff who missed a task deadline need your approval to check in and submit their note.</p>
+          <h3 className="font-bold text-sm text-ink">Late task access</h3>
+          <p className="text-xs text-[#64748B]">Field staff who missed a task deadline need your approval to check in and submit their note.</p>
         </div>
         <div className="flex gap-1 text-xs">
           {(['REQUESTED', 'APPROVED', 'REJECTED'] as const).map((s) => (
-            <button key={s} onClick={() => setStatus(s)} className={`px-3 h-8 rounded-lg font-semibold ${status === s ? 'bg-[#171717] text-white' : 'text-[#737373] hover:bg-[#F0EFEB]'}`}>
+            <button key={s} onClick={() => setStatus(s)} className={`px-3 h-8 rounded-lg font-semibold ${status === s ? 'bg-brand-700 text-white' : 'text-[#64748B] hover:bg-[#EEF2F7]'}`}>
               {s === 'REQUESTED' ? 'Pending' : s[0] + s.slice(1).toLowerCase()}
             </button>
           ))}
@@ -61,26 +61,26 @@ export function LateRequestsPanel({ onChanged }: { onChanged: () => void }) {
       {error && <div className="m-4 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-800">{error}</div>}
       {loading ? (
         <div className="p-8 flex justify-center">
-          <Loader2 className="w-5 h-5 animate-spin text-[#737373]" />
+          <Loader2 className="w-5 h-5 animate-spin text-[#64748B]" />
         </div>
       ) : items.length === 0 ? (
-        <div className="p-10 text-center text-sm text-[#737373]">
-          <Hourglass className="w-8 h-8 mx-auto mb-2 text-[#D4D4D4]" />
+        <div className="p-10 text-center text-sm text-[#64748B]">
+          <Hourglass className="w-8 h-8 mx-auto mb-2 text-[#CBD5E1]" />
           Nothing here.
         </div>
       ) : (
-        <ul className="divide-y divide-[#F0EFEB]">
+        <ul className="divide-y divide-[#EEF2F7]">
           {items.map((t) => (
             <li key={t.id} className="p-4 flex flex-col md:flex-row md:items-center gap-3">
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-sm">
                   {t.employee.fullName} · {t.title}
                 </div>
-                <div className="text-xs text-[#737373]">
+                <div className="text-xs text-[#64748B]">
                   {t.taskDate} · deadline {t.deadlineTime} · {t.locationName}
                 </div>
-                <div className="text-xs mt-1 text-[#171717] bg-amber-50 rounded-lg p-2">&ldquo;{t.lateRequestReason}&rdquo;</div>
-                {t.lateReviewNote && <div className="text-xs mt-1 text-[#737373]">Admin note: {t.lateReviewNote}</div>}
+                <div className="text-xs mt-1 text-ink bg-amber-50 rounded-lg p-2">&ldquo;{t.lateRequestReason}&rdquo;</div>
+                {t.lateReviewNote && <div className="text-xs mt-1 text-[#64748B]">Admin note: {t.lateReviewNote}</div>}
               </div>
               {status === 'REQUESTED' && (
                 <div className="flex gap-2">

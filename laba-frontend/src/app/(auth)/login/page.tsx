@@ -52,7 +52,7 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Field label="Email" error={errors.email?.message} icon={<Mail className="w-4 h-4" />}>
-          <input type="email" inputMode="email" autoComplete="email" {...register('email')} placeholder="you@labe.in" disabled={submitting} className={inputCls} />
+          <input type="email" inputMode="email" autoComplete="email" {...register('email')} placeholder="you@company.in" disabled={submitting} className={inputCls} />
         </Field>
         <Field label="Password" error={errors.password?.message} icon={<Lock className="w-4 h-4" />}>
           <input type="password" autoComplete="current-password" {...register('password')} placeholder="••••••••" disabled={submitting} className={inputCls} />

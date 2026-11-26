@@ -62,10 +62,10 @@ export const CorrectionModal: React.FC<CorrectionModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-5 border border-[#E5E5E5] space-y-4">
-        <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
-          <h3 className="text-sm font-bold text-[#171717]">Request Attendance Correction</h3>
-          <button onClick={onClose} className="text-[#737373] hover:text-[#171717]">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-5 border border-[#E2E8F0] space-y-4">
+        <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
+          <h3 className="text-sm font-bold text-ink">Request Attendance Correction</h3>
+          <button onClick={onClose} className="text-[#64748B] hover:text-brand-700">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -79,22 +79,22 @@ export const CorrectionModal: React.FC<CorrectionModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-3 text-xs">
           <div>
-            <label className="block font-medium text-[#171717] mb-1">Work Date</label>
+            <label className="block font-medium text-ink mb-1">Work Date</label>
             <input
               type="date"
               value={workDate}
               onChange={(e) => setWorkDate(e.target.value)}
               required
-              className="w-full p-2 border border-[#E5E5E5] rounded focus:outline-none focus:ring-1 focus:ring-black"
+              className="w-full p-2 border border-[#E2E8F0] rounded focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </div>
 
           <div>
-            <label className="block font-medium text-[#171717] mb-1">Correction Type</label>
+            <label className="block font-medium text-ink mb-1">Correction Type</label>
             <select
               value={correctionType}
               onChange={(e) => setCorrectionType(e.target.value)}
-              className="w-full p-2 border border-[#E5E5E5] rounded focus:outline-none focus:ring-1 focus:ring-black bg-white"
+              className="w-full p-2 border border-[#E2E8F0] rounded focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white"
             >
               <option value="MISSED_CHECKIN">Missed Check-In</option>
               <option value="MISSED_CHECKOUT">Missed Check-Out</option>
@@ -105,29 +105,29 @@ export const CorrectionModal: React.FC<CorrectionModalProps> = ({
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block font-medium text-[#171717] mb-1">Proposed Check-In</label>
+              <label className="block font-medium text-ink mb-1">Proposed Check-In</label>
               <input
                 type="text"
                 placeholder="09:15"
                 value={proposedCheckIn}
                 onChange={(e) => setProposedCheckIn(e.target.value)}
-                className="w-full p-2 border border-[#E5E5E5] rounded focus:outline-none focus:ring-1 focus:ring-black"
+                className="w-full p-2 border border-[#E2E8F0] rounded focus:outline-none focus:ring-1 focus:ring-brand-500"
               />
             </div>
             <div>
-              <label className="block font-medium text-[#171717] mb-1">Proposed Check-Out</label>
+              <label className="block font-medium text-ink mb-1">Proposed Check-Out</label>
               <input
                 type="text"
                 placeholder="16:45"
                 value={proposedCheckOut}
                 onChange={(e) => setProposedCheckOut(e.target.value)}
-                className="w-full p-2 border border-[#E5E5E5] rounded focus:outline-none focus:ring-1 focus:ring-black"
+                className="w-full p-2 border border-[#E2E8F0] rounded focus:outline-none focus:ring-1 focus:ring-brand-500"
               />
             </div>
           </div>
 
           <div>
-            <label className="block font-medium text-[#171717] mb-1">
+            <label className="block font-medium text-ink mb-1">
               Detailed Reason <span className="text-red-500">* (min 10 chars)</span>
             </label>
             <textarea
@@ -136,22 +136,22 @@ export const CorrectionModal: React.FC<CorrectionModalProps> = ({
               onChange={(e) => setEmployeeReason(e.target.value)}
               placeholder="Explain why the attendance could not be marked on time (e.g. emergency client call, temporary network outage)..."
               required
-              className="w-full p-2 border border-[#E5E5E5] rounded focus:outline-none focus:ring-1 focus:ring-black resize-none"
+              className="w-full p-2 border border-[#E2E8F0] rounded focus:outline-none focus:ring-1 focus:ring-brand-500 resize-none"
             />
           </div>
 
-          <div className="flex justify-end space-x-2 pt-2 border-t border-[#E5E5E5]">
+          <div className="flex justify-end space-x-2 pt-2 border-t border-[#E2E8F0]">
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 border border-[#E5E5E5] text-[#737373] hover:text-[#171717] rounded"
+              className="px-3 py-1.5 border border-[#E2E8F0] text-[#64748B] hover:text-brand-700 rounded"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-4 py-1.5 bg-[#171717] text-white hover:bg-black rounded font-medium flex items-center space-x-1.5 disabled:opacity-50"
+              className="px-4 py-1.5 bg-brand-700 text-white hover:bg-brand-800 rounded font-medium flex items-center space-x-1.5 disabled:opacity-50"
             >
               {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
               <span>Submit Request</span>

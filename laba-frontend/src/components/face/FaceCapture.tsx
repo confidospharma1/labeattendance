@@ -70,7 +70,7 @@ export function FaceCapture({ mode, title, onVerified, onEnrolled, onClose }: Pr
       } catch (e: any) {
         return fail(
           e?.name === 'NotAllowedError'
-            ? 'Camera permission was denied. Allow camera access for LABE Attendance in your phone settings.'
+            ? 'Camera permission was denied. Allow camera access for J-Track in your phone settings.'
             : 'Could not open the front camera.'
         );
       }
@@ -225,7 +225,7 @@ export function FaceCapture({ mode, title, onVerified, onEnrolled, onClose }: Pr
       </div>
 
       <div className="px-6 pb-[max(env(safe-area-inset-bottom),1.5rem)] text-center text-xs text-white/50">
-        Good light, face the camera, no cap or mask. Your face is checked on this phone and matched by the LABE server.
+        Good light, face the camera, no cap or mask. Your face is checked on this phone and matched by the J-Track server.
       </div>
     </div>
   );

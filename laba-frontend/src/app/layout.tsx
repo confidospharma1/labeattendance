@@ -4,8 +4,8 @@ import { QueryProvider } from '@/providers/QueryProvider';
 import { AuthProvider } from '@/providers/AuthProvider';
 
 export const metadata: Metadata = {
-  title: 'LABE Attendance Management System',
-  description: 'Multi-branch GPS Geofencing Employee Attendance Platform',
+  title: 'J-Track · Attendance & Field Tracking',
+  description: 'J-Track: GPS geofence, face verification and field tracking for every staff category',
 };
 
 export const viewport: Viewport = {

@@ -188,7 +188,7 @@ export function OfficeAttendance({ today, onChange }: { today: any; onChange: ()
             <button
               onClick={() => run('out')}
               disabled={busy || !win.canCheckOut || !reportOk}
-              className="w-full h-14 rounded-2xl bg-ink hover:bg-black text-white font-semibold text-base flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-500"
+              className="w-full h-14 rounded-2xl bg-ink hover:bg-brand-800 text-white font-semibold text-base flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-500"
             >
               {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogOut className="w-5 h-5" />}
               {busy

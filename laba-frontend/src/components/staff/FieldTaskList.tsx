@@ -83,7 +83,7 @@ export function FieldTaskList({
                 latitude: t.latitude,
                 longitude: t.longitude,
                 label: `${t.sequence}. ${t.title}`,
-                color: t.status === 'COMPLETED' || t.status === 'LATE_COMPLETED' ? '#059669' : t.displayStatus === 'MISSED' ? '#DC2626' : '#0F766E',
+                color: t.status === 'COMPLETED' || t.status === 'LATE_COMPLETED' ? '#059669' : t.displayStatus === 'MISSED' ? '#DC2626' : '#4338CA',
               }))}
             />
           </div>
@@ -296,7 +296,7 @@ function TaskCard({ task, faceRequired, onChange, survey }: { task: any; faceReq
               <button
                 onClick={complete}
                 disabled={busy || note.trim().length < 10}
-                className="w-full h-12 rounded-xl bg-ink hover:bg-black text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
+                className="w-full h-12 rounded-xl bg-ink hover:bg-brand-800 text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
               >
                 {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
                 {busy ? stepLabel[step] : 'Submit task note'}

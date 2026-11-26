@@ -7,6 +7,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { apiClient, apiErrorMessage } from '@/lib/api';
 import { formatISTDate } from '@/lib/utils';
 import { categoryInfo } from '@/lib/staff';
+import { Logo } from '@/components/common/Logo';
 import { AttendanceHistory } from '@/components/attendance/AttendanceHistory';
 import { OfficeAttendance } from '@/components/staff/OfficeAttendance';
 import { FieldTaskList } from '@/components/staff/FieldTaskList';
@@ -88,13 +89,10 @@ export default function EmployeeHome() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
-      <header className="bg-brand-700 text-white pt-[max(env(safe-area-inset-top),0.75rem)]">
-        <div className="max-w-xl mx-auto px-4 pb-5">
+      <header className="bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 text-white pt-[max(env(safe-area-inset-top),0.75rem)] rounded-b-3xl shadow-lg shadow-brand-900/10">
+        <div className="max-w-xl mx-auto px-4 pb-7">
           <div className="flex items-center justify-between h-12">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-white text-brand-700 flex items-center justify-center font-black">L</div>
-              <span className="font-semibold">LABE Attendance</span>
-            </div>
+            <Logo light size={32} />
             <div className="flex items-center gap-1">
               <button onClick={load} className="p-2 rounded-full hover:bg-white/10" aria-label="Refresh">
                 <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />

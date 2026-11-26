@@ -61,18 +61,18 @@ const TimeSelector: React.FC<TimeSelectorProps> = ({ label, value, onChange }) =
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <label className="text-xs text-[#737373] font-medium">{label}</label>
-        <span className="text-[10px] font-mono text-[#737373] bg-neutral-100 px-1.5 py-0.5 rounded border border-[#E5E5E5]">
+        <label className="text-xs text-[#64748B] font-medium">{label}</label>
+        <span className="text-[10px] font-mono text-[#64748B] bg-slate-100 px-1.5 py-0.5 rounded border border-[#E2E8F0]">
           {hour}:{minute} {period} ({value} IST)
         </span>
       </div>
-      <div className="flex items-center space-x-1.5 bg-[#F9F9F8] border border-[#E5E5E5] rounded-lg p-1.5 focus-within:ring-1 focus-within:ring-black">
+      <div className="flex items-center space-x-1.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-1.5 focus-within:ring-1 focus-within:ring-black">
         {/* Hour (01 - 12) */}
         <div className="flex-1">
           <select
             value={hour}
             onChange={(e) => handleHourChange(e.target.value)}
-            className="w-full bg-white border border-[#E5E5E5] rounded px-2 py-1.5 text-xs font-mono font-semibold text-[#171717] focus:outline-none focus:border-black cursor-pointer text-center"
+            className="w-full bg-white border border-[#E2E8F0] rounded px-2 py-1.5 text-xs font-mono font-semibold text-ink focus:outline-none focus:border-black cursor-pointer text-center"
             title="Hour (01 - 12)"
           >
             {HOURS.map((h) => (
@@ -83,14 +83,14 @@ const TimeSelector: React.FC<TimeSelectorProps> = ({ label, value, onChange }) =
           </select>
         </div>
 
-        <span className="text-sm font-bold text-[#737373]">:</span>
+        <span className="text-sm font-bold text-[#64748B]">:</span>
 
         {/* Minute (00 - 59) */}
         <div className="flex-1">
           <select
             value={minute}
             onChange={(e) => handleMinuteChange(e.target.value)}
-            className="w-full bg-white border border-[#E5E5E5] rounded px-2 py-1.5 text-xs font-mono font-semibold text-[#171717] focus:outline-none focus:border-black cursor-pointer text-center"
+            className="w-full bg-white border border-[#E2E8F0] rounded px-2 py-1.5 text-xs font-mono font-semibold text-ink focus:outline-none focus:border-black cursor-pointer text-center"
             title="Minute (00 - 59)"
           >
             {MINUTES.map((m) => (
@@ -205,18 +205,18 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-5 border border-[#E5E5E5] space-y-4 my-8">
-        <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
+      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-5 border border-[#E2E8F0] space-y-4 my-8">
+        <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-[#171717] text-white flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-brand-700 text-white flex items-center justify-center">
               <Sliders className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[#171717]">Company Attendance Policy Settings</h3>
-              <p className="text-xs text-[#737373]">Configure authoritative IST windows and GPS boundaries</p>
+              <h3 className="text-sm font-bold text-ink">Company Attendance Policy Settings</h3>
+              <p className="text-xs text-[#64748B]">Configure authoritative IST windows and GPS boundaries</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-[#737373] hover:text-[#171717]">
+          <button onClick={onClose} className="text-[#64748B] hover:text-brand-700">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -230,8 +230,8 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           {/* Morning Check-In Window */}
-          <div className="bg-[#FAF9F5] border border-[#EAE9E4] rounded-lg p-3 space-y-2.5">
-            <div className="flex items-center space-x-1.5 font-semibold text-[#171717]">
+          <div className="bg-[#FAF9F5] border border-[#E8ECF3] rounded-lg p-3 space-y-2.5">
+            <div className="flex items-center space-x-1.5 font-semibold text-ink">
               <Clock className="w-3.5 h-3.5 text-amber-600" />
               <span>Morning Check-In Window (IST)</span>
             </div>
@@ -247,14 +247,14 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                 onChange={setMorningEnd}
               />
             </div>
-            <p className="text-[11px] text-[#737373]">
+            <p className="text-[11px] text-[#64748B]">
               Staff must check in between these hours. Check-ins after the end time are recorded as absent.
             </p>
           </div>
 
           {/* Evening Check-Out Window */}
-          <div className="bg-[#FAF9F5] border border-[#EAE9E4] rounded-lg p-3 space-y-2.5">
-            <div className="flex items-center space-x-1.5 font-semibold text-[#171717]">
+          <div className="bg-[#FAF9F5] border border-[#E8ECF3] rounded-lg p-3 space-y-2.5">
+            <div className="flex items-center space-x-1.5 font-semibold text-ink">
               <Clock className="w-3.5 h-3.5 text-indigo-600" />
               <span>Evening Check-Out Window (IST)</span>
             </div>
@@ -270,14 +270,14 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                 onChange={setEveningEnd}
               />
             </div>
-            <p className="text-[11px] text-[#737373]">
+            <p className="text-[11px] text-[#64748B]">
               Staff can submit evening checkout only during this time window.
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-medium text-[#171717] mb-1">Default Geofence Radius</label>
+              <label className="block font-medium text-ink mb-1">Default Geofence Radius</label>
               <div className="flex items-center space-x-1">
                 <input
                   type="number"
@@ -286,13 +286,13 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                   value={defaultGeofenceRadiusMetres}
                   onChange={(e) => setDefaultGeofenceRadiusMetres(Number(e.target.value))}
                   required
-                  className="w-full p-2 border border-[#E5E5E5] rounded focus:outline-none focus:ring-1 focus:ring-black"
+                  className="w-full p-2 border border-[#E2E8F0] rounded focus:outline-none focus:ring-1 focus:ring-brand-500"
                 />
-                <span className="text-xs text-[#737373]">metres</span>
+                <span className="text-xs text-[#64748B]">metres</span>
               </div>
             </div>
             <div>
-              <label className="block font-medium text-[#171717] mb-1">GPS Accuracy Max Limit</label>
+              <label className="block font-medium text-ink mb-1">GPS Accuracy Max Limit</label>
               <div className="flex items-center space-x-1">
                 <input
                   type="number"
@@ -301,55 +301,55 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                   value={gpsAccuracyRejectMetres}
                   onChange={(e) => setGpsAccuracyRejectMetres(Number(e.target.value))}
                   required
-                  className="w-full p-2 border border-[#E5E5E5] rounded focus:outline-none focus:ring-1 focus:ring-black"
+                  className="w-full p-2 border border-[#E2E8F0] rounded focus:outline-none focus:ring-1 focus:ring-brand-500"
                 />
-                <span className="text-xs text-[#737373]">metres</span>
+                <span className="text-xs text-[#64748B]">metres</span>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-lg bg-[#F9F9F8] border border-[#E5E5E5]">
-            <label className="flex items-center gap-2 font-medium text-[#171717] sm:col-span-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]">
+            <label className="flex items-center gap-2 font-medium text-ink sm:col-span-3">
               <input type="checkbox" checked={faceRequired} onChange={(e) => setFaceRequired(e.target.checked)} className="w-4 h-4 accent-teal-700" />
               Require face verification for attendance
             </label>
             <div className="sm:col-span-2">
-              <label className="block font-medium text-[#171717] mb-1">Face match strictness: {Math.round(faceThreshold * 100)}%</label>
+              <label className="block font-medium text-ink mb-1">Face match strictness: {Math.round(faceThreshold * 100)}%</label>
               <input type="range" min={0.3} max={0.8} step={0.05} value={faceThreshold} onChange={(e) => setFaceThreshold(Number(e.target.value))} disabled={!faceRequired} className="w-full accent-teal-700" />
-              <div className="text-[11px] text-[#737373]">Higher = stricter. 50% is recommended; raise it if wrong people pass, lower it if real staff fail often.</div>
+              <div className="text-[11px] text-[#64748B]">Higher = stricter. 50% is recommended; raise it if wrong people pass, lower it if real staff fail often.</div>
             </div>
             <div>
-              <label className="block font-medium text-[#171717] mb-1">Late access lasts</label>
+              <label className="block font-medium text-ink mb-1">Late access lasts</label>
               <div className="flex items-center space-x-1">
-                <input type="number" min={1} max={168} value={lateHours} onChange={(e) => setLateHours(Number(e.target.value))} className="w-full p-2 border border-[#E5E5E5] rounded" />
-                <span className="text-xs text-[#737373]">hours</span>
+                <input type="number" min={1} max={168} value={lateHours} onChange={(e) => setLateHours(Number(e.target.value))} className="w-full p-2 border border-[#E2E8F0] rounded" />
+                <span className="text-xs text-[#64748B]">hours</span>
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block font-medium text-[#171717] mb-1">Revision Notes (Optional)</label>
+            <label className="block font-medium text-ink mb-1">Revision Notes (Optional)</label>
             <textarea
               rows={2}
               placeholder="e.g. Adjusted winter morning shift timings for coastal branches..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full p-2 border border-[#E5E5E5] rounded focus:outline-none focus:ring-1 focus:ring-black resize-none"
+              className="w-full p-2 border border-[#E2E8F0] rounded focus:outline-none focus:ring-1 focus:ring-brand-500 resize-none"
             />
           </div>
 
-          <div className="flex justify-end space-x-2 pt-3 border-t border-[#E5E5E5]">
+          <div className="flex justify-end space-x-2 pt-3 border-t border-[#E2E8F0]">
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 border border-[#E5E5E5] text-[#737373] hover:text-[#171717] rounded"
+              className="px-3 py-1.5 border border-[#E2E8F0] text-[#64748B] hover:text-brand-700 rounded"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-4 py-1.5 bg-[#171717] hover:bg-black text-white rounded font-medium flex items-center space-x-1.5 disabled:opacity-50"
+              className="px-4 py-1.5 bg-brand-700 hover:bg-brand-800 text-white rounded font-medium flex items-center space-x-1.5 disabled:opacity-50"
             >
               {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
               <span>Save Policy Version</span>

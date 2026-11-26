@@ -1,6 +1,6 @@
-# LABE Multi-Branch GPS Geofencing Attendance Management System
+# J-Track — Attendance & Field Tracking
 
-Enterprise attendance management web application engineered for **LABE** pharmacy branches across Andhra Pradesh, India.
+J-Track is the attendance and field-tracking system (web + Android app) for head office, regional office, distribution centres, field executives, pharmacies, laboratories, camps and leadership across Andhra Pradesh, India.
 
 ---
 
@@ -111,7 +111,5 @@ npx cap open android                                                   # then Bu
 
 ### Database changes on deploy
 
-Render's build does not migrate the database. Before deploying a backend with schema changes, apply them once:
-review `laba-backend/prisma/sql/upgrade-production-from-main.sql` (it lists the destructive steps at the top),
-back up the Neon database, then run `npx prisma db execute --file prisma/sql/upgrade-production-from-main.sql`.
+Render runs `npm run build`, which calls `scripts/db-sync.js` (only when `RENDER=true`) to apply **additive** schema changes with `prisma db push` before the new API starts. Destructive changes (dropping a table/column that has data) are refused: the build fails and Render keeps the previous version live, so apply those manually after a backup.
 

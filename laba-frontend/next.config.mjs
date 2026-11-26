@@ -29,7 +29,7 @@ const nextConfig = {
         },
       }),
   env: {
-    NEXT_PUBLIC_APP_NAME: 'LABE Attendance',
+    NEXT_PUBLIC_APP_NAME: 'J-Track',
   },
   webpack(config) {
     // The face library is browser-only; always use its self-contained ESM build (never the tfjs-node build).

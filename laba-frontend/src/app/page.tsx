@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/providers/AuthProvider';
+import { Logo } from '@/components/common/Logo';
 
 /** Entry point: send the user to the right screen for their role. */
 export default function Home() {
@@ -18,8 +19,8 @@ export default function Home() {
   }, [user, loading, router]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-brand-700 text-white gap-4">
-      <div className="w-14 h-14 rounded-2xl bg-white text-brand-700 flex items-center justify-center font-black text-2xl">L</div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 text-white gap-5">
+      <Logo light size={56} subtitle="Attendance & field tracking" />
       <Loader2 className="w-6 h-6 animate-spin text-brand-100" />
     </div>
   );

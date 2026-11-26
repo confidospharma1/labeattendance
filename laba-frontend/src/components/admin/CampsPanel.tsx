@@ -7,7 +7,7 @@ import { FenceValue, isBoundary } from '@/lib/geo';
 import { categoryInfo, fmtDate, fmtIST, istToday } from '@/lib/staff';
 import { GeofenceEditor } from '@/components/map/dynamic';
 
-const input = 'w-full px-2.5 py-2 border border-[#E5E5E5] rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-black';
+const input = 'w-full px-2.5 py-2 border border-[#E2E8F0] rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-500';
 
 const emptyForm = () => ({
   name: '',
@@ -138,12 +138,12 @@ export function CampsPanel({ employees, branches }: { employees: any[]; branches
 
   return (
     <div className="space-y-4">
-      <div className="bg-white border border-[#E5E5E5] rounded-xl p-4 flex flex-wrap items-center gap-3">
+      <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 flex flex-wrap items-center gap-3">
         <div className="flex-1 min-w-[200px]">
           <h3 className="font-semibold text-sm">Camp attendance</h3>
-          <p className="text-[11px] text-[#737373]">Assigned staff can mark attendance only inside the camp geofence, from 30 min before start until the end time.</p>
+          <p className="text-[11px] text-[#64748B]">Assigned staff can mark attendance only inside the camp geofence, from 30 min before start until the end time.</p>
         </div>
-        <button onClick={openNew} className="px-3 py-2 bg-[#171717] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5">
+        <button onClick={openNew} className="px-3 py-2 bg-brand-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5">
           <Plus className="w-3.5 h-3.5" /> New camp
         </button>
       </div>
@@ -151,7 +151,7 @@ export function CampsPanel({ employees, branches }: { employees: any[]; branches
       {error && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800">{error}</div>}
 
       {form && (
-        <div className="bg-white border border-[#171717] rounded-xl p-4 space-y-3 text-xs">
+        <div className="bg-white border border-brand-700 rounded-xl p-4 space-y-3 text-xs">
           <div className="flex items-center justify-between">
             <div className="font-semibold text-sm">{editingId ? 'Edit camp' : 'New camp'}</div>
             <button onClick={() => setForm(null)} aria-label="Close">
@@ -208,13 +208,13 @@ export function CampsPanel({ employees, branches }: { employees: any[]; branches
               <Users className="w-3.5 h-3.5" /> Assigned staff ({form.employeeIds.length})
             </div>
             <input value={staffSearch} onChange={(e) => setStaffSearch(e.target.value)} placeholder="Search staff" className={`${input} mb-2`} />
-            <div className="max-h-48 overflow-y-auto border border-[#E5E5E5] rounded-lg divide-y divide-[#F5F5F4]">
+            <div className="max-h-48 overflow-y-auto border border-[#E2E8F0] rounded-lg divide-y divide-[#F1F5F9]">
               {staffList.map((e) => (
-                <label key={e.id} className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#FBFBFA]">
+                <label key={e.id} className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#F8FAFC]">
                   <input type="checkbox" checked={form.employeeIds.includes(e.id)} onChange={() => toggleStaff(e.id)} />
                   <span className="font-medium">{e.fullName}</span>
-                  <span className="text-[#737373] font-mono">{e.employeeCode}</span>
-                  <span className="text-[#A3A3A3] truncate">{categoryInfo(e.staffCategory)?.short ?? ''} {e.designation ? `· ${e.designation}` : ''}</span>
+                  <span className="text-[#64748B] font-mono">{e.employeeCode}</span>
+                  <span className="text-[#94A3B8] truncate">{categoryInfo(e.staffCategory)?.short ?? ''} {e.designation ? `· ${e.designation}` : ''}</span>
                 </label>
               ))}
             </div>
@@ -224,7 +224,7 @@ export function CampsPanel({ employees, branches }: { employees: any[]; branches
             <button
               onClick={save}
               disabled={saving || form.name.trim().length < 3 || form.locationName.trim().length < 2}
-              className="px-4 py-2 bg-[#171717] text-white rounded-lg font-semibold flex items-center gap-1.5 disabled:opacity-50"
+              className="px-4 py-2 bg-brand-700 text-white rounded-lg font-semibold flex items-center gap-1.5 disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Save camp
             </button>
@@ -239,19 +239,19 @@ export function CampsPanel({ employees, branches }: { employees: any[]; branches
           </div>
         )}
         {!loading && camps.length === 0 && (
-          <div className="bg-white border border-dashed border-[#D4D4D4] rounded-xl p-10 text-center text-xs text-[#737373]">No camps in the last week or next 60 days.</div>
+          <div className="bg-white border border-dashed border-[#CBD5E1] rounded-xl p-10 text-center text-xs text-[#64748B]">No camps in the last week or next 60 days.</div>
         )}
         {camps.map((c) => (
-          <div key={c.id} className={`bg-white border rounded-xl p-4 text-xs ${c.isCancelled ? 'border-dashed border-[#D4D4D4] opacity-60' : 'border-[#E5E5E5]'}`}>
+          <div key={c.id} className={`bg-white border rounded-xl p-4 text-xs ${c.isCancelled ? 'border-dashed border-[#CBD5E1] opacity-60' : 'border-[#E2E8F0]'}`}>
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center flex-shrink-0">
                 <Tent className="w-4 h-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm text-[#171717]">
+                <div className="font-semibold text-sm text-ink">
                   {c.name} {c.isCancelled && <span className="text-red-600 text-[10px]">CANCELLED</span>}
                 </div>
-                <div className="text-[#737373] flex flex-wrap gap-x-2">
+                <div className="text-[#64748B] flex flex-wrap gap-x-2">
                   <span>
                     {fmtDate(c.campDate)} · {c.startTime}–{c.endTime}
                   </span>
@@ -274,15 +274,15 @@ export function CampsPanel({ employees, branches }: { employees: any[]; branches
             {c.assignments.length > 0 && (
               <div className="mt-3 grid sm:grid-cols-2 gap-1.5">
                 {c.assignments.map((a: any) => (
-                  <div key={a.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#F7F6F2]">
+                  <div key={a.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#F4F6FB]">
                     <span className="flex-1 truncate">
-                      <strong>{a.employee.fullName}</strong> <span className="font-mono text-[#737373]">{a.employee.employeeCode}</span>
+                      <strong>{a.employee.fullName}</strong> <span className="font-mono text-[#64748B]">{a.employee.employeeCode}</span>
                     </span>
-                    <span className={a.checkInAt ? 'text-emerald-700 font-semibold' : 'text-[#A3A3A3]'}>
+                    <span className={a.checkInAt ? 'text-emerald-700 font-semibold' : 'text-[#94A3B8]'}>
                       {a.checkInAt ? `${fmtIST(a.checkInAt)}${a.checkOutAt ? `–${fmtIST(a.checkOutAt)}` : ''}` : 'not marked'}
                     </span>
                     {a.hasCheckInSelfie && (
-                      <button onClick={() => showSelfie(a.id)} className="text-[#525252]" aria-label="Selfie">
+                      <button onClick={() => showSelfie(a.id)} className="text-[#475569]" aria-label="Selfie">
                         <Camera className="w-3.5 h-3.5" />
                       </button>
                     )}

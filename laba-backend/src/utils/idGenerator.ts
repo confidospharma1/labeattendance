@@ -5,7 +5,7 @@ type Tx = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction'
 
 /**
  * Generates sequential, collision-free employee codes per staff category,
- * e.g. LABE-HO-001 (head office), LABE-SE-004 (sales executive), LABE-OS-002 (legacy office staff).
+ * e.g. JT-HO-001 (head office), JT-SE-004 (sales executive), JT-OS-002 (legacy office staff).
  */
 export async function generateNextEmployeeCode(
   tx: Tx,

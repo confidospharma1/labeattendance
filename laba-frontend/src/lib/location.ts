@@ -19,7 +19,7 @@ export const isNativeApp = () => Capacitor.isNativePlatform();
 const friendly = (msg: string) => {
   const m = msg.toLowerCase();
   if (m.includes('denied') || m.includes('permission'))
-    return 'Location permission was denied. Allow location access for LABE Attendance in your phone settings.';
+    return 'Location permission was denied. Allow location access for J-Track in your phone settings.';
   if (m.includes('disabled') || m.includes('unavailable') || m.includes('off'))
     return 'Location is turned off. Switch on GPS / Location in your phone settings.';
   if (m.includes('timeout') || m.includes('timed out'))

@@ -15,14 +15,14 @@ async function main() {
     org = await prisma.organization.update({
       where: { id: org.id },
       data: {
-        name: 'LABE Pharmacy',
+        name: 'J-Track',
         slug: 'labe',
       },
     });
   } else {
     org = await prisma.organization.create({
       data: {
-        name: 'LABE Pharmacy',
+        name: 'J-Track',
         slug: 'labe',
         timezone: 'Asia/Kolkata',
         isActive: true,
@@ -58,13 +58,13 @@ async function main() {
     await prisma.employee.upsert({
       where: { userId: superAdminUser.id },
       update: {
-        fullName: 'LABE Super Administrator',
+        fullName: 'J-Track Super Administrator',
       },
       create: {
         userId: superAdminUser.id,
         organizationId: org.id,
         employeeCode: email.includes('labe') ? 'LABE-SA-001' : 'LABA-SA-001',
-        fullName: 'LABE Super Administrator',
+        fullName: 'J-Track Super Administrator',
         mobile: '9876543210',
         employeeType: EmployeeType.SUPER_ADMIN,
         status: 'ACTIVE',
@@ -98,13 +98,13 @@ async function main() {
     await prisma.employee.upsert({
       where: { userId: adminUser.id },
       update: {
-        fullName: 'LABE Regional Manager',
+        fullName: 'J-Track Regional Manager',
       },
       create: {
         userId: adminUser.id,
         organizationId: org.id,
         employeeCode: email.includes('labe') ? 'LABE-AD-001' : 'LABA-AD-001',
-        fullName: 'LABE Regional Manager',
+        fullName: 'J-Track Regional Manager',
         mobile: '9876543211',
         employeeType: EmployeeType.ADMIN,
         status: 'ACTIVE',

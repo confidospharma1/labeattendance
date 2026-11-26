@@ -226,35 +226,35 @@ export default function GeofenceEditor({
 
   return (
     <div className={maximized ? 'fixed inset-0 z-[100] bg-black/70 p-2 sm:p-5 flex' : 'relative w-full'}>
-      <div className={`${maximized ? 'w-full h-full' : ''} flex flex-col bg-white rounded-xl border border-[#E5E5E5] overflow-hidden`}>
+      <div className={`${maximized ? 'w-full h-full' : ''} flex flex-col bg-white rounded-xl border border-[#E2E8F0] overflow-hidden`}>
         {/* Toolbar */}
-        <div className="p-2 border-b border-[#E5E5E5] space-y-2 bg-[#FBFBFA]">
+        <div className="p-2 border-b border-[#E2E8F0] space-y-2 bg-[#F8FAFC]">
           <div className="flex flex-wrap items-center gap-1.5">
             {allowCircle && allowPolygon && (
-              <div className="flex rounded-lg bg-[#F0EFEB] p-0.5">
+              <div className="flex rounded-lg bg-[#EEF2F7] p-0.5">
                 <button
                   type="button"
                   onClick={() => set({ shape: 'CIRCLE' })}
-                  className={`${btn} border-transparent ${shape === 'CIRCLE' ? 'bg-blue-600 text-white' : 'text-[#525252]'}`}
+                  className={`${btn} border-transparent ${shape === 'CIRCLE' ? 'bg-blue-600 text-white' : 'text-[#475569]'}`}
                 >
                   <CircleDot className="w-3.5 h-3.5" /> Radius
                 </button>
                 <button
                   type="button"
                   onClick={() => set({ shape: 'POLYGON' })}
-                  className={`${btn} border-transparent ${shape === 'POLYGON' ? 'bg-red-600 text-white' : 'text-[#525252]'}`}
+                  className={`${btn} border-transparent ${shape === 'POLYGON' ? 'bg-red-600 text-white' : 'text-[#475569]'}`}
                 >
                   <Hexagon className="w-3.5 h-3.5" /> Exact boundary
                 </button>
               </div>
             )}
-            <div className="flex rounded-lg bg-[#F0EFEB] p-0.5 ml-auto">
+            <div className="flex rounded-lg bg-[#EEF2F7] p-0.5 ml-auto">
               {(['satellite', 'streets'] as const).map((l) => (
                 <button
                   key={l}
                   type="button"
                   onClick={() => setLayer(l)}
-                  className={`${btn} border-transparent capitalize ${layer === l ? 'bg-[#171717] text-white' : 'text-[#525252]'}`}
+                  className={`${btn} border-transparent capitalize ${layer === l ? 'bg-brand-700 text-white' : 'text-[#475569]'}`}
                 >
                   {l}
                 </button>
@@ -263,15 +263,15 @@ export default function GeofenceEditor({
             <button type="button" onClick={myLocation} className={`${btn} border-emerald-200 text-emerald-700 bg-emerald-50`} title="My location">
               {locating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
             </button>
-            <button type="button" onClick={() => setMaximized((m) => !m)} className={`${btn} border-[#E5E5E5] text-[#171717]`} title="Full screen">
+            <button type="button" onClick={() => setMaximized((m) => !m)} className={`${btn} border-[#E2E8F0] text-ink`} title="Full screen">
               {maximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
             </button>
           </div>
 
           {/* Not a <form>: the editor sits inside other forms, and nested forms are invalid HTML */}
           <div className="flex gap-1.5">
-            <div className="flex-1 flex items-center gap-1.5 px-2 border border-[#E5E5E5] rounded-lg bg-white">
-              <Search className="w-3.5 h-3.5 text-[#737373]" />
+            <div className="flex-1 flex items-center gap-1.5 px-2 border border-[#E2E8F0] rounded-lg bg-white">
+              <Search className="w-3.5 h-3.5 text-[#64748B]" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -285,14 +285,14 @@ export default function GeofenceEditor({
                 className="flex-1 py-1.5 text-xs bg-transparent focus:outline-none"
               />
             </div>
-            <button type="button" onClick={() => runSearch()} disabled={searching} className={`${btn} border-[#171717] bg-[#171717] text-white`}>
+            <button type="button" onClick={() => runSearch()} disabled={searching} className={`${btn} border-brand-700 bg-brand-700 text-white`}>
               {searching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Search'}
             </button>
           </div>
 
           {shape === 'POLYGON' && (
             <div className="flex flex-wrap gap-1.5">
-              <button type="button" onClick={areasAtPin} className={`${btn} border-[#E5E5E5] text-[#171717] bg-white`}>
+              <button type="button" onClick={areasAtPin} className={`${btn} border-[#E2E8F0] text-ink bg-white`}>
                 <Crosshair className="w-3.5 h-3.5" /> Boundaries at map centre pin
               </button>
               {!drawing ? (
@@ -312,7 +312,7 @@ export default function GeofenceEditor({
                   <button type="button" onClick={finishDrawing} className={`${btn} border-emerald-600 bg-emerald-600 text-white`}>
                     <Check className="w-3.5 h-3.5" /> Finish ({draft.length} pts)
                   </button>
-                  <button type="button" onClick={() => setDraft((d) => d.slice(0, -1))} className={`${btn} border-[#E5E5E5] bg-white`}>
+                  <button type="button" onClick={() => setDraft((d) => d.slice(0, -1))} className={`${btn} border-[#E2E8F0] bg-white`}>
                     <Undo2 className="w-3.5 h-3.5" /> Undo
                   </button>
                   <button
@@ -321,13 +321,13 @@ export default function GeofenceEditor({
                       setDrawing(false);
                       setDraft([]);
                     }}
-                    className={`${btn} border-[#E5E5E5] bg-white`}
+                    className={`${btn} border-[#E2E8F0] bg-white`}
                   >
                     Cancel
                   </button>
                 </>
               )}
-              <button type="button" onClick={() => fileRef.current?.click()} className={`${btn} border-[#E5E5E5] text-[#171717] bg-white`}>
+              <button type="button" onClick={() => fileRef.current?.click()} className={`${btn} border-[#E2E8F0] text-ink bg-white`}>
                 <Upload className="w-3.5 h-3.5" /> Import KML / GeoJSON
               </button>
               <input
@@ -345,7 +345,7 @@ export default function GeofenceEditor({
                 <button
                   type="button"
                   onClick={() => set({ boundary: null, boundaryLabel: null })}
-                  className={`${btn} border-[#E5E5E5] text-red-600 bg-white`}
+                  className={`${btn} border-[#E2E8F0] text-red-600 bg-white`}
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Clear
                 </button>
@@ -354,7 +354,7 @@ export default function GeofenceEditor({
           )}
 
           {options && shape === 'POLYGON' && (
-            <div className="max-h-40 overflow-y-auto rounded-lg border border-[#E5E5E5] bg-white divide-y divide-[#F0EFEB]">
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-[#E2E8F0] bg-white divide-y divide-[#EEF2F7]">
               {options.map((o) => (
                 <button
                   key={o.id}
@@ -365,11 +365,11 @@ export default function GeofenceEditor({
                   }}
                   className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs"
                 >
-                  <div className="font-semibold text-[#171717]">
-                    {o.name} <span className="font-normal text-[#737373]">· {o.kind.replace(/_/g, ' ')}</span>
+                  <div className="font-semibold text-ink">
+                    {o.name} <span className="font-normal text-[#64748B]">· {o.kind.replace(/_/g, ' ')}</span>
                     {o.note && <span className="ml-1 text-[10px] text-amber-700">({o.note})</span>}
                   </div>
-                  <div className="text-[10px] text-[#737373] truncate">{o.displayName}</div>
+                  <div className="text-[10px] text-[#64748B] truncate">{o.displayName}</div>
                 </button>
               ))}
             </div>
@@ -429,7 +429,7 @@ export default function GeofenceEditor({
         </div>
 
         {/* Footer */}
-        <div className="px-3 py-2 border-t border-[#E5E5E5] bg-[#F7F6F2] text-[11px] text-[#525252] space-y-1.5">
+        <div className="px-3 py-2 border-t border-[#E2E8F0] bg-[#F4F6FB] text-[11px] text-[#475569] space-y-1.5">
           {shape === 'CIRCLE' ? (
             <div className="flex items-center gap-2">
               <span className="whitespace-nowrap">Radius</span>
@@ -448,7 +448,7 @@ export default function GeofenceEditor({
                 max={maxRadius}
                 value={value.radiusMetres}
                 onChange={(e) => set({ radiusMetres: Math.max(10, Math.min(maxRadius, Number(e.target.value) || 10)) })}
-                className="w-20 px-2 py-1 border border-[#E5E5E5] rounded text-right"
+                className="w-20 px-2 py-1 border border-[#E2E8F0] rounded text-right"
               />
               <span>m</span>
             </div>
@@ -458,7 +458,7 @@ export default function GeofenceEditor({
               <span>
                 {value.boundary ? (
                   <>
-                    <strong className="text-[#171717]">{value.boundaryLabel || 'Boundary'}</strong> · {countVertices(value.boundary)} points.{' '}
+                    <strong className="text-ink">{value.boundaryLabel || 'Boundary'}</strong> · {countVertices(value.boundary)} points.{' '}
                     {polygonHint || 'Attendance is accepted anywhere inside this outline.'}
                   </>
                 ) : (
@@ -467,11 +467,11 @@ export default function GeofenceEditor({
               </span>
             </div>
           )}
-          <div className="font-mono text-[10px] text-[#737373]">
+          <div className="font-mono text-[10px] text-[#64748B]">
             Pin {value.latitude.toFixed(6)}, {value.longitude.toFixed(6)}
           </div>
           {maximized && (
-            <button type="button" onClick={() => setMaximized(false)} className="w-full py-1.5 rounded-lg bg-[#171717] text-white font-semibold">
+            <button type="button" onClick={() => setMaximized(false)} className="w-full py-1.5 rounded-lg bg-brand-700 text-white font-semibold">
               Done
             </button>
           )}

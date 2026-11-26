@@ -58,11 +58,11 @@ export class BranchService {
     if (!branchCode) {
       const branchCount = await prisma.branch.count({ where: { organizationId } });
       const nextNum = (branchCount + 1).toString().padStart(3, '0');
-      branchCode = `LABE-B-${nextNum}`;
+      branchCode = `JT-L-${nextNum}`;
       // Verify collision
       const duplicate = await prisma.branch.findFirst({ where: { branchCode } });
       if (duplicate) {
-        branchCode = `LABE-B-${nextNum}-${Math.floor(100 + Math.random() * 900)}`;
+        branchCode = `JT-L-${nextNum}-${Math.floor(100 + Math.random() * 900)}`;
       }
     } else {
       const existing = await prisma.branch.findFirst({

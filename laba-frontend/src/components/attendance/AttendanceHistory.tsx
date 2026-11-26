@@ -49,15 +49,15 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ records, o
   };
 
   return (
-    <div className="bg-white border border-[#E5E5E5] rounded-lg p-5">
-      <div className="flex items-center justify-between pb-3 border-b border-[#E5E5E5] mb-4">
+    <div className="bg-white border border-[#E2E8F0] rounded-lg p-5">
+      <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0] mb-4">
         <div className="flex items-center space-x-2">
-          <Calendar className="w-4 h-4 text-[#737373]" />
-          <h3 className="text-sm font-bold text-[#171717]">Attendance History</h3>
+          <Calendar className="w-4 h-4 text-[#64748B]" />
+          <h3 className="text-sm font-bold text-ink">Attendance History</h3>
         </div>
         <button
           onClick={() => handleOpenCorrection()}
-          className="flex items-center space-x-1 px-2.5 py-1 text-xs font-medium text-[#171717] bg-[#F7F6F2] hover:bg-[#EAE8E1] border border-[#E5E5E5] rounded transition-colors"
+          className="flex items-center space-x-1 px-2.5 py-1 text-xs font-medium text-ink bg-[#F4F6FB] hover:bg-[#EAE8E1] border border-[#E2E8F0] rounded transition-colors"
         >
           <FileEdit className="w-3.5 h-3.5" />
           <span>Request Correction</span>
@@ -65,7 +65,7 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ records, o
       </div>
 
       {records.length === 0 ? (
-        <div className="text-center py-8 text-xs text-[#737373]">
+        <div className="text-center py-8 text-xs text-[#64748B]">
           No previous attendance records found.
         </div>
       ) : (
@@ -75,10 +75,10 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ records, o
             {records.map((rec) => (
               <div
                 key={rec.id}
-                className="bg-[#FBFBFA] border border-[#E5E5E5] rounded-lg p-3.5 space-y-2.5 shadow-2xs"
+                className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-3.5 space-y-2.5 shadow-2xs"
               >
-                <div className="flex items-center justify-between border-b border-[#EAE9E4] pb-2">
-                  <span className="font-semibold text-xs text-[#171717]">
+                <div className="flex items-center justify-between border-b border-[#E8ECF3] pb-2">
+                  <span className="font-semibold text-xs text-ink">
                     {new Date(rec.workDate).toLocaleDateString('en-IN', {
                       year: 'numeric',
                       month: 'short',
@@ -89,10 +89,10 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ records, o
                   <div>{getStatusBadge(rec.status)}</div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-[11px] bg-white p-2 rounded border border-[#EAE9E4]">
+                <div className="grid grid-cols-2 gap-2 text-[11px] bg-white p-2 rounded border border-[#E8ECF3]">
                   <div>
-                    <span className="text-[#737373] block text-[10px] uppercase">Check-In</span>
-                    <strong className="text-[#171717]">
+                    <span className="text-[#64748B] block text-[10px] uppercase">Check-In</span>
+                    <strong className="text-ink">
                       {rec.checkInAt
                         ? new Date(rec.checkInAt).toLocaleTimeString('en-IN', {
                             hour: '2-digit',
@@ -103,8 +103,8 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ records, o
                     </strong>
                   </div>
                   <div>
-                    <span className="text-[#737373] block text-[10px] uppercase">Check-Out</span>
-                    <strong className="text-[#171717]">
+                    <span className="text-[#64748B] block text-[10px] uppercase">Check-Out</span>
+                    <strong className="text-ink">
                       {rec.checkOutAt
                         ? new Date(rec.checkOutAt).toLocaleTimeString('en-IN', {
                             hour: '2-digit',
@@ -116,12 +116,12 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ records, o
                   </div>
                 </div>
 
-                <div className="text-[11px] text-[#737373] space-y-1">
+                <div className="text-[11px] text-[#64748B] space-y-1">
                   <div>
-                    Location: <strong className="text-[#171717]">{rec.checkInLocationName || 'Branch'}</strong>
+                    Location: <strong className="text-ink">{rec.checkInLocationName || 'Branch'}</strong>
                   </div>
                   {rec.workReport && (
-                    <div className="italic text-[#171717] bg-white p-1.5 rounded border border-[#EAE9E4]">
+                    <div className="italic text-ink bg-white p-1.5 rounded border border-[#E8ECF3]">
                       &quot;{rec.workReport}&quot;
                     </div>
                   )}
@@ -143,7 +143,7 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ records, o
           <div className="hidden sm:block overflow-x-auto -mx-1 sm:mx-0">
             <table className="w-full text-left text-xs min-w-[560px]">
               <thead>
-                <tr className="border-b border-[#E5E5E5] text-[#737373]">
+                <tr className="border-b border-[#E2E8F0] text-[#64748B]">
                   <th className="pb-2 font-medium">Work Date</th>
                   <th className="pb-2 font-medium">Location</th>
                   <th className="pb-2 font-medium">Check-In</th>
@@ -153,10 +153,10 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ records, o
                   <th className="pb-2 font-medium text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E5E5E5]">
+              <tbody className="divide-y divide-[#E2E8F0]">
                 {records.map((rec) => (
-                  <tr key={rec.id} className="hover:bg-[#F9F9F8]">
-                    <td className="py-2.5 font-medium text-[#171717]">
+                  <tr key={rec.id} className="hover:bg-[#F8FAFC]">
+                    <td className="py-2.5 font-medium text-ink">
                       {new Date(rec.workDate).toLocaleDateString('en-IN', {
                         year: 'numeric',
                         month: 'short',
@@ -164,10 +164,10 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ records, o
                         timeZone: 'Asia/Kolkata',
                       })}
                     </td>
-                    <td className="py-2.5 text-[#737373]">
+                    <td className="py-2.5 text-[#64748B]">
                       {rec.checkInLocationName || 'Branch'}
                     </td>
-                    <td className="py-2.5 text-[#171717]">
+                    <td className="py-2.5 text-ink">
                       {rec.checkInAt
                         ? new Date(rec.checkInAt).toLocaleTimeString('en-IN', {
                             hour: '2-digit',
@@ -176,7 +176,7 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ records, o
                           })
                         : '—'}
                     </td>
-                    <td className="py-2.5 text-[#171717]">
+                    <td className="py-2.5 text-ink">
                       {rec.checkOutAt
                         ? new Date(rec.checkOutAt).toLocaleTimeString('en-IN', {
                             hour: '2-digit',
@@ -186,7 +186,7 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ records, o
                         : '—'}
                     </td>
                     <td className="py-2.5">{getStatusBadge(rec.status)}</td>
-                    <td className="py-2.5 text-[#737373] max-w-xs truncate">
+                    <td className="py-2.5 text-[#64748B] max-w-xs truncate">
                       {rec.workReport || '—'}
                     </td>
                     <td className="py-2.5 text-right">

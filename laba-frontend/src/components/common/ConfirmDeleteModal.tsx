@@ -26,20 +26,20 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="w-full max-w-md bg-white border border-[#E5E5E5] rounded-xl shadow-xl overflow-hidden">
+      <div className="w-full max-w-md bg-white border border-[#E2E8F0] rounded-xl shadow-xl overflow-hidden">
         <div className="p-6">
           <div className="flex items-center space-x-3 text-red-600 mb-4">
             <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
               <AlertTriangle className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-base text-[#171717]">{title}</h3>
-              <p className="text-xs text-[#737373]">Permanent Database Deletion</p>
+              <h3 className="font-semibold text-base text-ink">{title}</h3>
+              <p className="text-xs text-[#64748B]">Permanent Database Deletion</p>
             </div>
           </div>
 
           <div className="space-y-2 mb-6">
-            <p className="text-sm text-[#171717]">
+            <p className="text-sm text-ink">
               Are you sure you want to delete <strong className="font-semibold">{itemName}</strong>?
             </p>
             <p className="text-xs text-red-700 bg-red-50 p-3 rounded-lg border border-red-200 leading-relaxed">
@@ -52,7 +52,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 border border-[#E5E5E5] hover:bg-[#F9F9F8] rounded-lg text-xs font-medium text-[#171717] transition-colors disabled:opacity-50"
+              className="px-4 py-2 border border-[#E2E8F0] hover:bg-[#F8FAFC] rounded-lg text-xs font-medium text-ink transition-colors disabled:opacity-50"
             >
               Cancel
             </button>

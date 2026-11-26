@@ -16,7 +16,7 @@ interface Props {
 
 type Kind = StaffCategory | 'ADMIN' | 'LEGACY_OFFICE' | 'LEGACY_FIELD';
 
-const input = 'w-full px-2.5 py-2 border border-[#E5E5E5] rounded-lg focus:outline-none focus:ring-1 focus:ring-black bg-white';
+const input = 'w-full px-2.5 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white';
 
 const errorText = (err: any, fallback: string) => {
   const e = err?.response?.data?.error;
@@ -154,13 +154,13 @@ export function EmployeeFormModal({ isOpen, mode, employee, branches, onClose, o
 
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/40 p-2 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full border border-[#E5E5E5] my-2 sm:my-8">
-        <div className="flex items-center justify-between border-b border-[#E5E5E5] p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full border border-[#E2E8F0] my-2 sm:my-8">
+        <div className="flex items-center justify-between border-b border-[#E2E8F0] p-4">
           <div className="flex items-center gap-2">
             {mode === 'add' ? <UserPlus className="w-4 h-4" /> : <UserCog className="w-4 h-4" />}
-            <h3 className="text-sm font-bold text-[#171717]">{mode === 'add' ? 'Register new employee' : `Edit ${employee?.fullName}`}</h3>
+            <h3 className="text-sm font-bold text-ink">{mode === 'add' ? 'Register new employee' : `Edit ${employee?.fullName}`}</h3>
           </div>
-          <button onClick={onClose} className="text-[#737373] hover:text-[#171717]" aria-label="Close">
+          <button onClick={onClose} className="text-[#64748B] hover:text-brand-700" aria-label="Close">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -198,7 +198,7 @@ export function EmployeeFormModal({ isOpen, mode, employee, branches, onClose, o
                 {mode === 'edit' && kind === 'LEGACY_FIELD' && <option value="LEGACY_FIELD">Field staff (not classified)</option>}
               </optgroup>
             </select>
-            {info && <span className="block mt-1 text-[11px] text-[#737373]">{info.how}</span>}
+            {info && <span className="block mt-1 text-[11px] text-[#64748B]">{info.how}</span>}
           </label>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -211,7 +211,7 @@ export function EmployeeFormModal({ isOpen, mode, employee, branches, onClose, o
               <input
                 value={employeeCode}
                 onChange={(e) => setEmployeeCode(e.target.value.toUpperCase())}
-                placeholder={mode === 'add' ? 'Auto (e.g. LABE-HO-001) or your HR code' : ''}
+                placeholder={mode === 'add' ? 'Auto (e.g. JT-HO-001) or your HR code' : ''}
                 className={`${input} font-mono`}
               />
             </label>
@@ -249,7 +249,7 @@ export function EmployeeFormModal({ isOpen, mode, employee, branches, onClose, o
                   ))}
                 </select>
                 {info?.locationTypes && (
-                  <label className="mt-1 flex items-center gap-1.5 text-[11px] text-[#737373]">
+                  <label className="mt-1 flex items-center gap-1.5 text-[11px] text-[#64748B]">
                     <input type="checkbox" checked={showAllLocations} onChange={(e) => setShowAllLocations(e.target.checked)} />
                     Show all location types
                   </label>
@@ -294,11 +294,11 @@ export function EmployeeFormModal({ isOpen, mode, employee, branches, onClose, o
             </label>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-[#E5E5E5]">
-            <button type="button" onClick={onClose} className="px-3 py-2 border border-[#E5E5E5] rounded-lg">
+          <div className="flex justify-end gap-2 pt-3 border-t border-[#E2E8F0]">
+            <button type="button" onClick={onClose} className="px-3 py-2 border border-[#E2E8F0] rounded-lg">
               Cancel
             </button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 bg-[#171717] text-white rounded-lg font-semibold flex items-center gap-1.5 disabled:opacity-50">
+            <button type="submit" disabled={submitting} className="px-4 py-2 bg-brand-700 text-white rounded-lg font-semibold flex items-center gap-1.5 disabled:opacity-50">
               {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
               {mode === 'add' ? 'Create employee' : 'Save changes'}
             </button>

@@ -56,8 +56,8 @@ export function attendanceModeFor(employeeType: EmployeeType | string, category:
 export const modeNeedsLocation = (mode: AttendanceMode) => mode === 'BRANCH' || mode === 'TERRITORY';
 
 export function codePrefixFor(employeeType: EmployeeType | string, category?: StaffCategory | null): string {
-  if (category) return `LABE-${CODE_PREFIX[category]}`;
-  if (employeeType === 'FIELD_STAFF') return 'LABE-FS';
-  if (employeeType === 'ADMIN' || employeeType === 'SUPER_ADMIN') return 'LABE-AD';
-  return 'LABE-OS';
+  if (category) return `JT-${CODE_PREFIX[category]}`;
+  if (employeeType === 'FIELD_STAFF') return 'JT-FS';
+  if (employeeType === 'ADMIN' || employeeType === 'SUPER_ADMIN') return 'JT-AD';
+  return 'JT-OS';
 }

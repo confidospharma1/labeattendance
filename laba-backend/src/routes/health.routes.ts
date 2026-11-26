@@ -18,7 +18,7 @@ router.get('/health', async (req: Request, res: Response) => {
     res,
     {
       status: isHealthy ? 'healthy' : 'degraded',
-      service: 'labe-backend-api',
+      service: 'j-track-api',
       version: '1.0.0',
       database: dbStatus,
       uptime: process.uptime(),

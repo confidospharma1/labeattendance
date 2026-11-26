@@ -20,7 +20,7 @@ const DISTRICT_NAMES = Array.from(new Set(AP_DISTRICTS.map((d) => d.name)));
 const emptyFence = (): FenceValue => ({ latitude: 16.3067, longitude: 80.4365, radiusMetres: 100, shape: 'CIRCLE', boundary: null, boundaryLabel: null });
 const emptyTerritory = (): FenceValue => ({ ...emptyFence(), shape: 'POLYGON' });
 
-const input = 'w-full px-3 py-2 border border-[#E5E5E5] rounded-lg focus:outline-none focus:border-[#171717] text-[#171717] bg-white';
+const input = 'w-full px-3 py-2 border border-[#E2E8F0] rounded-lg focus:outline-none focus:border-brand-700 text-ink bg-white';
 
 /** Add / edit a work location: head office, regional office, distribution centre, pharmacy, laboratory. */
 export function LocationModal({ isOpen, mode, branch, onClose, onSuccess }: Props) {
@@ -133,18 +133,18 @@ export function LocationModal({ isOpen, mode, branch, onClose, onSuccess }: Prop
 
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/60 p-2 sm:p-5 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full border border-[#E5E5E5] my-2 sm:my-auto flex flex-col max-h-[96vh]">
-        <div className="flex items-center justify-between border-b border-[#E5E5E5] p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full border border-[#E2E8F0] my-2 sm:my-auto flex flex-col max-h-[96vh]">
+        <div className="flex items-center justify-between border-b border-[#E2E8F0] p-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#171717] text-white flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-brand-700 text-white flex items-center justify-center">
               <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[#171717]">{mode === 'add' ? 'Add work location' : `Edit ${name || 'location'}`}</h3>
-              <p className="text-[11px] text-[#737373]">Office, distribution centre, pharmacy or lab, with its attendance geofence</p>
+              <h3 className="text-sm font-bold text-ink">{mode === 'add' ? 'Add work location' : `Edit ${name || 'location'}`}</h3>
+              <p className="text-[11px] text-[#64748B]">Office, distribution centre, pharmacy or lab, with its attendance geofence</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-[#737373] hover:bg-[#F0EFEB]" aria-label="Close">
+          <button onClick={onClose} className="p-1 rounded-lg text-[#64748B] hover:bg-[#EEF2F7]" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -192,7 +192,7 @@ export function LocationModal({ isOpen, mode, branch, onClose, onSuccess }: Prop
               ) : (
                 <div>
                   <span className="block font-semibold mb-1">Code</span>
-                  <div className="px-3 py-2 rounded-lg bg-[#F7F6F2] font-mono">{branchCode}</div>
+                  <div className="px-3 py-2 rounded-lg bg-[#F4F6FB] font-mono">{branchCode}</div>
                 </div>
               )}
               <label className="block">
@@ -218,7 +218,7 @@ export function LocationModal({ isOpen, mode, branch, onClose, onSuccess }: Prop
 
             <div>
               <div className="font-semibold mb-1">Attendance geofence</div>
-              <p className="text-[11px] text-[#737373] mb-2">
+              <p className="text-[11px] text-[#64748B] mb-2">
                 Staff of this location must be inside this area to check in. Use a radius around the building, or the exact outline of the premises / town.
               </p>
               <GeofenceEditor value={fence} onChange={setFence} maxRadius={5000} />
@@ -232,7 +232,7 @@ export function LocationModal({ isOpen, mode, branch, onClose, onSuccess }: Prop
                     <span className="font-semibold flex items-center gap-1">
                       <MapIcon className="w-3.5 h-3.5 text-violet-700" /> Sales territory (D.C fencing map)
                     </span>
-                    <span className="text-[11px] text-[#737373]">
+                    <span className="text-[11px] text-[#64748B]">
                       Sales executives of this DC can mark attendance anywhere inside this area (for example the whole Kadapa town boundary). Without it they
                       must be inside the DC geofence above.
                     </span>
@@ -249,11 +249,11 @@ export function LocationModal({ isOpen, mode, branch, onClose, onSuccess }: Prop
               </div>
             )}
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-[#E5E5E5] sticky bottom-0 bg-white">
-              <button type="button" onClick={onClose} className="px-3 py-2 border border-[#E5E5E5] rounded-lg">
+            <div className="flex justify-end gap-2 pt-3 border-t border-[#E2E8F0] sticky bottom-0 bg-white">
+              <button type="button" onClick={onClose} className="px-3 py-2 border border-[#E2E8F0] rounded-lg">
                 Cancel
               </button>
-              <button type="submit" disabled={saving} className="px-4 py-2 bg-[#171717] text-white rounded-lg font-semibold flex items-center gap-1.5 disabled:opacity-50">
+              <button type="submit" disabled={saving} className="px-4 py-2 bg-brand-700 text-white rounded-lg font-semibold flex items-center gap-1.5 disabled:opacity-50">
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                 {mode === 'add' ? 'Create location' : 'Save changes'}
               </button>

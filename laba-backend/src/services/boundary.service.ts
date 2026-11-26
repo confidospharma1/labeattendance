@@ -10,7 +10,7 @@ import { logger } from '../config/logger';
 import { BoundaryGeometry, boundaryCenter, countVertices, isValidBoundary } from '../utils/geo';
 
 const NOMINATIM = 'https://nominatim.openstreetmap.org';
-const USER_AGENT = 'LABE-Attendance/1.0 (geofence boundary lookup)';
+const USER_AGENT = 'J-Track/1.0 (attendance geofence boundary lookup)';
 const CACHE_TTL_MS = 24 * 3600_000;
 // ~5 m tolerance: keeps city outlines to a few hundred points without visibly changing them
 const POLYGON_THRESHOLD = 0.00005;

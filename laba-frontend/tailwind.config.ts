@@ -9,25 +9,27 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // LABE brand: pharmacy teal
+        // J-Track brand: indigo
         brand: {
-          50: '#F0FDFA',
-          100: '#CCFBF1',
-          200: '#99F6E4',
-          500: '#14B8A6',
-          600: '#0D9488',
-          700: '#0F766E',
-          800: '#115E59',
-          900: '#134E4A',
+          50: '#EEF2FF',
+          100: '#E0E7FF',
+          200: '#C7D2FE',
+          300: '#A5B4FC',
+          400: '#818CF8',
+          500: '#6366F1',
+          600: '#4F46E5',
+          700: '#4338CA',
+          800: '#3730A3',
+          900: '#312E81',
         },
         ink: '#0F172A',
-        background: '#F7F6F2',
+        background: '#F4F6FB',
         surface: '#FFFFFF',
-        'surface-muted': '#F0EFEB',
-        'text-primary': '#171717',
-        'text-secondary': '#737373',
-        border: '#E5E5E5',
-        'border-strong': '#D4D4D4',
+        'surface-muted': '#EEF2F7',
+        'text-primary': '#0F172A',
+        'text-secondary': '#64748B',
+        border: '#E2E8F0',
+        'border-strong': '#CBD5E1',
         status: {
           success: '#15803D',
           'success-bg': '#F0FDF4',

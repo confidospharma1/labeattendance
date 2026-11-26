@@ -5,11 +5,11 @@
 @tailwind utilities;
 
 :root {
-  --background: #F7F6F2;
+  --background: #F4F6FB;
   --surface: #FFFFFF;
-  --text-primary: #171717;
-  --text-secondary: #737373;
-  --border: #E5E5E5;
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --border: #E2E8F0;
 }
 
 body {

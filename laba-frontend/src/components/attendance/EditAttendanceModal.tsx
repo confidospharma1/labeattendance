@@ -72,23 +72,23 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150 overflow-y-auto">
-      <div className="w-full max-w-lg bg-white border border-[#E5E5E5] rounded-xl shadow-xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
+      <div className="w-full max-w-lg bg-white border border-[#E2E8F0] rounded-xl shadow-xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E5E5] bg-[#F7F6F2]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E8F0] bg-[#F4F6FB]">
           <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#171717] text-white flex items-center justify-center font-bold text-xs">
+            <div className="w-8 h-8 rounded-lg bg-brand-700 text-white flex items-center justify-center font-bold text-xs">
               <Clock className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-semibold text-sm text-[#171717]">Edit Attendance Record</h3>
-              <p className="text-[11px] text-[#737373]">
+              <h3 className="font-semibold text-sm text-ink">Edit Attendance Record</h3>
+              <p className="text-[11px] text-[#64748B]">
                 {record.employee?.fullName} ({record.employee?.employeeCode})
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-[#737373] hover:text-[#171717] hover:bg-[#E5E5E5] transition-colors"
+            className="p-1 rounded-lg text-[#64748B] hover:text-brand-700 hover:bg-[#E2E8F0] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -104,13 +104,13 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-[#171717] mb-1">
+            <label className="block text-xs font-semibold text-ink mb-1">
               Attendance Status <span className="text-red-500">*</span>
             </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-[#E5E5E5] rounded-lg focus:outline-none focus:border-[#171717] text-[#171717]"
+              className="w-full px-3 py-2 text-xs bg-white border border-[#E2E8F0] rounded-lg focus:outline-none focus:border-brand-700 text-ink"
             >
               <option value="CHECKED_IN">Checked-In Only</option>
               <option value="CHECKED_OUT">Checked-Out (Complete Day)</option>
@@ -121,32 +121,32 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-[#171717] mb-1">
+              <label className="block text-xs font-semibold text-ink mb-1">
                 Check-In Timestamp
               </label>
               <input
                 type="datetime-local"
                 value={checkInTime}
                 onChange={(e) => setCheckInTime(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-white border border-[#E5E5E5] rounded-lg focus:outline-none focus:border-[#171717] text-[#171717]"
+                className="w-full px-3 py-2 text-xs bg-white border border-[#E2E8F0] rounded-lg focus:outline-none focus:border-brand-700 text-ink"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#171717] mb-1">
+              <label className="block text-xs font-semibold text-ink mb-1">
                 Check-Out Timestamp
               </label>
               <input
                 type="datetime-local"
                 value={checkOutTime}
                 onChange={(e) => setCheckOutTime(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-white border border-[#E5E5E5] rounded-lg focus:outline-none focus:border-[#171717] text-[#171717]"
+                className="w-full px-3 py-2 text-xs bg-white border border-[#E2E8F0] rounded-lg focus:outline-none focus:border-brand-700 text-ink"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#171717] mb-1">
+            <label className="block text-xs font-semibold text-ink mb-1">
               Daily Work Report
             </label>
             <textarea
@@ -154,12 +154,12 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
               value={workReport}
               onChange={(e) => setWorkReport(e.target.value)}
               placeholder="Summary of employee's daily clinical and counter activities..."
-              className="w-full px-3 py-2 text-xs bg-white border border-[#E5E5E5] rounded-lg focus:outline-none focus:border-[#171717] text-[#171717]"
+              className="w-full px-3 py-2 text-xs bg-white border border-[#E2E8F0] rounded-lg focus:outline-none focus:border-brand-700 text-ink"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#171717] mb-1">
+            <label className="block text-xs font-semibold text-ink mb-1">
               Admin Adjustment Reason
             </label>
             <input
@@ -167,24 +167,24 @@ export const EditAttendanceModal: React.FC<EditAttendanceModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Approved manual correction per store manager call"
-              className="w-full px-3 py-2 text-xs bg-white border border-[#E5E5E5] rounded-lg focus:outline-none focus:border-[#171717] text-[#171717]"
+              className="w-full px-3 py-2 text-xs bg-white border border-[#E2E8F0] rounded-lg focus:outline-none focus:border-brand-700 text-ink"
             />
           </div>
 
           {/* Footer actions */}
-          <div className="pt-3 border-t border-[#E5E5E5] flex items-center justify-end space-x-2">
+          <div className="pt-3 border-t border-[#E2E8F0] flex items-center justify-end space-x-2">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="px-4 py-2 border border-[#E5E5E5] hover:bg-[#F9F9F8] rounded-lg text-xs font-medium text-[#171717] transition-colors"
+              className="px-4 py-2 border border-[#E2E8F0] hover:bg-[#F8FAFC] rounded-lg text-xs font-medium text-ink transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-4 py-2 bg-[#171717] hover:bg-black text-white rounded-lg text-xs font-medium transition-colors flex items-center space-x-1.5 disabled:opacity-50"
+              className="px-4 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-xs font-medium transition-colors flex items-center space-x-1.5 disabled:opacity-50"
             >
               {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               <span>{submitting ? 'Saving...' : 'Update Record'}</span>

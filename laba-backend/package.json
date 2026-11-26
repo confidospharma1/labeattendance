@@ -1,10 +1,10 @@
 {
   "name": "labe-backend",
   "version": "1.0.0",
-  "description": "LABE Multi-Branch GPS Geofencing Attendance Management Backend API",
+  "description": "J-Track attendance and field tracking API",
   "main": "dist/app.js",
   "scripts": {
-    "build": "prisma generate && tsc",
+    "build": "prisma generate && node scripts/db-sync.js && tsc",
     "start": "node dist/app.js",
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
     "prisma:generate": "prisma generate",

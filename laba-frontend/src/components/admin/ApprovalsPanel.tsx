@@ -80,23 +80,23 @@ export function ApprovalsPanel({ branches, employees, onChanged }: Props) {
 
   return (
     <div className="space-y-5">
-      <section className="bg-white border border-[#E5E5E5] rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-[#E5E5E5] flex items-center justify-between">
-          <h3 className="font-bold text-sm text-[#171717]">Pending staff registrations</h3>
-          <span className="text-xs text-[#737373]">{pending.length} waiting</span>
+      <section className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-[#E2E8F0] flex items-center justify-between">
+          <h3 className="font-bold text-sm text-ink">Pending staff registrations</h3>
+          <span className="text-xs text-[#64748B]">{pending.length} waiting</span>
         </div>
         {error && <div className="m-4 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-800">{error}</div>}
         {loading ? (
           <div className="p-8 flex justify-center">
-            <Loader2 className="w-5 h-5 animate-spin text-[#737373]" />
+            <Loader2 className="w-5 h-5 animate-spin text-[#64748B]" />
           </div>
         ) : pending.length === 0 ? (
-          <div className="p-10 text-center text-sm text-[#737373]">
-            <Inbox className="w-8 h-8 mx-auto mb-2 text-[#D4D4D4]" />
+          <div className="p-10 text-center text-sm text-[#64748B]">
+            <Inbox className="w-8 h-8 mx-auto mb-2 text-[#CBD5E1]" />
             No registrations waiting for approval.
           </div>
         ) : (
-          <ul className="divide-y divide-[#F0EFEB]">
+          <ul className="divide-y divide-[#EEF2F7]">
             {pending.map((e) => {
               const c = choices[e.id] || { staffCategory: 'HEAD_OFFICE', branchId: '', shiftId: '' };
               const info = categoryInfo(c.staffCategory);
@@ -105,28 +105,28 @@ export function ApprovalsPanel({ branches, employees, onChanged }: Props) {
               return (
                 <li key={e.id} className="p-4 flex flex-col lg:flex-row lg:items-center gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm text-[#171717]">
-                      {e.fullName} <span className="font-mono text-xs text-[#737373]">{e.employeeCode}</span>
+                    <div className="font-semibold text-sm text-ink">
+                      {e.fullName} <span className="font-mono text-xs text-[#64748B]">{e.employeeCode}</span>
                     </div>
-                    <div className="text-xs text-[#737373]">
+                    <div className="text-xs text-[#64748B]">
                       {e.user?.email} · {e.mobile} · registered {new Date(e.createdAt).toLocaleDateString('en-IN')}
                     </div>
                     {(e.designation || e.dateOfJoining) && (
-                      <div className="text-xs text-[#525252]">
+                      <div className="text-xs text-[#475569]">
                         {e.designation}
                         {e.dateOfJoining && ` · DOJ ${String(e.dateOfJoining).slice(0, 10)}`}
                       </div>
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <select value={c.staffCategory} onChange={(ev) => set({ staffCategory: ev.target.value })} className="h-9 px-2 text-xs border border-[#E5E5E5] rounded-lg bg-white">
+                    <select value={c.staffCategory} onChange={(ev) => set({ staffCategory: ev.target.value })} className="h-9 px-2 text-xs border border-[#E2E8F0] rounded-lg bg-white">
                       {CATEGORIES.map((k) => (
                         <option key={k.value} value={k.value}>
                           {k.label}
                         </option>
                       ))}
                     </select>
-                    <select value={c.branchId} onChange={(ev) => set({ branchId: ev.target.value })} className="h-9 px-2 text-xs border border-[#E5E5E5] rounded-lg bg-white max-w-[14rem]">
+                    <select value={c.branchId} onChange={(ev) => set({ branchId: ev.target.value })} className="h-9 px-2 text-xs border border-[#E2E8F0] rounded-lg bg-white max-w-[14rem]">
                       <option value="">{info?.locationRequired ? 'Select location' : 'No location'}</option>
                       {locs.map((b) => (
                         <option key={b.id} value={b.id}>
@@ -135,7 +135,7 @@ export function ApprovalsPanel({ branches, employees, onChanged }: Props) {
                       ))}
                     </select>
                     {shifts.length > 0 && (
-                      <select value={c.shiftId} onChange={(ev) => set({ shiftId: ev.target.value })} className="h-9 px-2 text-xs border border-[#E5E5E5] rounded-lg bg-white max-w-[12rem]">
+                      <select value={c.shiftId} onChange={(ev) => set({ shiftId: ev.target.value })} className="h-9 px-2 text-xs border border-[#E2E8F0] rounded-lg bg-white max-w-[12rem]">
                         <option value="">No shift</option>
                         {shifts.map((s) => (
                           <option key={s.id} value={s.id}>
@@ -206,13 +206,13 @@ function FaceAdmin({ employees }: { employees: any[] }) {
   };
 
   return (
-    <section className="bg-white border border-[#E5E5E5] rounded-xl p-4">
-      <h3 className="font-bold text-sm text-[#171717] flex items-center gap-2">
+    <section className="bg-white border border-[#E2E8F0] rounded-xl p-4">
+      <h3 className="font-bold text-sm text-ink flex items-center gap-2">
         <ScanFace className="w-4 h-4 text-brand-700" /> Face profiles
       </h3>
-      <p className="text-xs text-[#737373] mt-1">View an employee&apos;s enrolled photo, or reset it if they changed phones or the enrolment was wrong.</p>
+      <p className="text-xs text-[#64748B] mt-1">View an employee&apos;s enrolled photo, or reset it if they changed phones or the enrolment was wrong.</p>
       <div className="flex flex-wrap items-center gap-2 mt-3">
-        <select value={employeeId} onChange={(e) => view(e.target.value)} className="h-9 px-2 text-xs border border-[#E5E5E5] rounded-lg bg-white min-w-[14rem]">
+        <select value={employeeId} onChange={(e) => view(e.target.value)} className="h-9 px-2 text-xs border border-[#E2E8F0] rounded-lg bg-white min-w-[14rem]">
           <option value="">Select employee</option>
           {employees.map((e) => (
             <option key={e.id} value={e.id}>
@@ -227,8 +227,8 @@ function FaceAdmin({ employees }: { employees: any[] }) {
         )}
       </div>
       {/* eslint-disable-next-line @next/next/no-img-element -- data URL, nothing for next/image to optimise */}
-      {photo && <img src={photo} alt="Enrolled face" className="mt-3 w-32 h-24 object-cover rounded-lg border border-[#E5E5E5]" />}
-      {msg && <div className="mt-3 text-xs text-[#525252]">{msg}</div>}
+      {photo && <img src={photo} alt="Enrolled face" className="mt-3 w-32 h-24 object-cover rounded-lg border border-[#E2E8F0]" />}
+      {msg && <div className="mt-3 text-xs text-[#475569]">{msg}</div>}
     </section>
   );
 }

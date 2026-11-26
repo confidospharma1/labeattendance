@@ -31,7 +31,7 @@ interface Props {
   heightClass?: string;
 }
 
-const numberIcon = (n: number, color = '#0F766E') =>
+const numberIcon = (n: number, color = '#4338CA') =>
   L.divIcon({
     className: '',
     html: `<div style="width:24px;height:24px;border-radius:50%;background:${color};color:#fff;font:700 12px system-ui;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)">${n}</div>`,
@@ -94,7 +94,7 @@ export default function FenceMap({ fences = [], me, route = [], points = [], hei
         )}
 
         {route.length > 1 && (
-          <Polyline positions={route.map((p) => [p.latitude, p.longitude] as [number, number])} pathOptions={{ color: '#0F766E', weight: 3, dashArray: '8 6' }} />
+          <Polyline positions={route.map((p) => [p.latitude, p.longitude] as [number, number])} pathOptions={{ color: '#4338CA', weight: 3, dashArray: '8 6' }} />
         )}
         {route.map((p, i) => (
           <Marker key={`r${i}`} position={[p.latitude, p.longitude]} icon={numberIcon(i + 1, p.color)}>

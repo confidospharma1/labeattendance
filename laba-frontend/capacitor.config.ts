@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.labe.attendance',
-  appName: 'LABE Attendance',
+  appName: 'J-Track',
   webDir: 'out',
   server: {
     // http://localhost keeps camera + GPS working (localhost is a secure context) and lets the
