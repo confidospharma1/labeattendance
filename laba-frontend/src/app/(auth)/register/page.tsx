@@ -2,20 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, CheckCircle2, Loader2, Building2, Route } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { apiClient, apiErrorMessage } from '@/lib/api';
 import { AuthShell } from '@/components/common/AuthShell';
+import { CATEGORIES, categoryInfo, locationTypeLabel, StaffCategory } from '@/lib/staff';
 
 const fieldCls =
   'w-full h-12 px-3 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-ink placeholder:text-slate-400';
 
 export default function RegisterPage() {
-  const [branches, setBranches] = useState<{ id: string; name: string; district: string }[]>([]);
+  const [branches, setBranches] = useState<{ id: string; name: string; district: string; locationType?: string }[]>([]);
   const [form, setForm] = useState({
     fullName: '',
     email: '',
     mobile: '',
-    employeeType: 'OFFICE_STAFF' as 'OFFICE_STAFF' | 'FIELD_STAFF',
+    staffCategory: 'HEAD_OFFICE' as StaffCategory,
+    designation: '',
+    dateOfJoining: '',
     branchId: '',
     password: '',
     confirm: '',
@@ -31,6 +34,9 @@ export default function RegisterPage() {
       .catch(() => setError('Could not load branches. Check your internet connection.'));
   }, []);
 
+  const info = categoryInfo(form.staffCategory);
+  const locations = branches.filter((b) => !info?.locationTypes || !b.locationType || info.locationTypes.includes(b.locationType as any));
+
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -38,13 +44,15 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
     if (form.password !== form.confirm) return setError('Passwords do not match.');
-    if (form.employeeType === 'OFFICE_STAFF' && !form.branchId) return setError('Select your branch.');
+    if (info?.locationRequired && !form.branchId) return setError('Select your work location.');
     setSubmitting(true);
     try {
-      const { confirm, branchId, ...rest } = form;
+      const { confirm, branchId, designation, dateOfJoining, ...rest } = form;
       const res = await apiClient.post('/auth/register', {
         ...rest,
-        ...(form.employeeType === 'OFFICE_STAFF' ? { branchId } : {}),
+        ...(branchId && { branchId }),
+        ...(designation.trim() && { designation: designation.trim() }),
+        ...(dateOfJoining && { dateOfJoining }),
       });
       setDone(res.data.data.employeeCode);
     } catch (err) {
@@ -74,23 +82,21 @@ export default function RegisterPage() {
   return (
     <AuthShell title="Create staff account" subtitle="Register, then wait for admin approval">
       <form onSubmit={submit} className="space-y-3">
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            { v: 'OFFICE_STAFF', label: 'Office staff', icon: Building2 },
-            { v: 'FIELD_STAFF', label: 'Field staff', icon: Route },
-          ].map(({ v, label, icon: Icon }) => (
-            <button
-              type="button"
-              key={v}
-              onClick={() => setForm((f) => ({ ...f, employeeType: v as any }))}
-              className={`h-16 rounded-xl border-2 flex flex-col items-center justify-center gap-1 text-sm font-semibold ${
-                form.employeeType === v ? 'border-brand-600 bg-brand-50 text-brand-800' : 'border-slate-200 text-slate-600'
-              }`}
-            >
-              <Icon className="w-5 h-5" /> {label}
-            </button>
-          ))}
-        </div>
+        <label className="block">
+          <span className="text-xs font-semibold text-slate-600">I work as</span>
+          <select
+            value={form.staffCategory}
+            onChange={(e) => setForm((f) => ({ ...f, staffCategory: e.target.value as StaffCategory, branchId: '' }))}
+            className={fieldCls + " mt-1"}
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label} ({c.short})
+              </option>
+            ))}
+          </select>
+          {info && <span className="block mt-1 text-xs text-slate-500">{info.how}</span>}
+        </label>
 
         <input required value={form.fullName} onChange={set('fullName')} placeholder="Full name" className={fieldCls} />
         <input required type="email" inputMode="email" value={form.email} onChange={set('email')} placeholder="Email" className={fieldCls} />
@@ -104,12 +110,17 @@ export default function RegisterPage() {
           placeholder="Mobile (10 digits)"
           className={fieldCls}
         />
-        {form.employeeType === 'OFFICE_STAFF' && (
-          <select required value={form.branchId} onChange={set('branchId')} className={fieldCls}>
-            <option value="">Select your branch</option>
-            {branches.map((b) => (
+        <input value={form.designation} onChange={set('designation')} placeholder="Designation (e.g. Pharmacist)" className={fieldCls} />
+        <label className="block">
+          <span className="text-xs font-semibold text-slate-600">Date of joining</span>
+          <input type="date" value={form.dateOfJoining} onChange={set('dateOfJoining')} className={fieldCls + " mt-1"} />
+        </label>
+        {info?.locationTypes && (
+          <select required={info.locationRequired} value={form.branchId} onChange={set('branchId')} className={fieldCls}>
+            <option value="">{info.locationRequired ? 'Select your work location' : 'Distribution centre (optional)'}</option>
+            {locations.map((b) => (
               <option key={b.id} value={b.id}>
-                {b.name} ({b.district})
+                {b.name} · {locationTypeLabel(b.locationType)} ({b.district})
               </option>
             ))}
           </select>

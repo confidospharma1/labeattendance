@@ -40,6 +40,11 @@ import { EditAttendanceModal } from '@/components/attendance/EditAttendanceModal
 import { ConfirmDeleteModal } from '@/components/common/ConfirmDeleteModal';
 import { PolicyModal } from '@/components/policy/PolicyModal';
 import { AnalyticsView } from '@/components/analytics/AnalyticsView';
+import { AttendanceBoard } from '@/components/admin/AttendanceBoard';
+import { ShiftsPanel } from '@/components/admin/ShiftsPanel';
+import { CampsPanel } from '@/components/admin/CampsPanel';
+import { CustomersView } from '@/components/customers/CustomersView';
+import { categoryInfo, fmtDate, locationTypeLabel } from '@/lib/staff';
 
 interface EmployeeItem {
   id: string;
@@ -48,8 +53,12 @@ interface EmployeeItem {
   email: string;
   mobile: string;
   employeeType: string;
+  staffCategory?: string | null;
+  designation?: string | null;
+  dateOfJoining?: string | null;
+  shift?: { id: string; name: string; startTime: string; endTime: string } | null;
   status: string;
-  assignedBranch: { id: string; name: string; branchCode: string } | null;
+  assignedBranch: { id: string; name: string; branchCode: string; locationType?: string } | null;
   createdAt: string;
 }
 
@@ -69,9 +78,10 @@ export default function AdminDashboard() {
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<
-    'attendance' | 'employees' | 'branches' | 'corrections' | 'analytics' | 'audit' | 'policy' | 'approvals' | 'tasks' | 'late'
+    'attendance' | 'employees' | 'branches' | 'corrections' | 'analytics' | 'audit' | 'policy' | 'approvals' | 'tasks' | 'late' | 'shifts' | 'camps' | 'customers'
   >('attendance');
   const [plannerEmployeeId, setPlannerEmployeeId] = useState<string | undefined>(undefined);
+  const [boardRefresh, setBoardRefresh] = useState(0);
 
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -106,9 +116,9 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       const [empRes, summaryRes, branchRes, corrRes, policyRes, auditRes] = await Promise.all([
-        apiClient.get('/employees?limit=50'),
+        apiClient.get('/employees?limit=500'),
         apiClient.get('/attendance/dashboard'),
-        apiClient.get('/branches?limit=100'),
+        apiClient.get('/branches?limit=500'),
         apiClient.get('/attendance/corrections'),
         apiClient.get('/policies/current').catch(() => ({ data: { data: null } })),
         apiClient.get('/audit-logs?limit=50').catch(() => ({ data: { data: [] } })),
@@ -124,6 +134,7 @@ export default function AdminDashboard() {
       setCorrections(corrRes.data.data || []);
       setPolicy(policyRes.data.data || null);
       setAuditLogs(auditRes.data.data || []);
+      setBoardRefresh((n) => n + 1);
     } catch (err) {
       console.error('Failed to load admin dashboard data', err);
     } finally {
@@ -248,7 +259,7 @@ export default function AdminDashboard() {
               className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#171717] hover:bg-black text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
             >
               {downloadingExcel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              <span>Export Excel (6 Sheets)</span>
+              <span>Export Excel</span>
             </button>
             <span className="text-xs font-medium text-[#737373] px-2 py-1 bg-[#F7F6F2] rounded border border-[#E5E5E5]">
               {user?.email}
@@ -296,7 +307,7 @@ export default function AdminDashboard() {
               className="w-full flex items-center justify-center space-x-2 py-2 px-3 bg-[#171717] text-white rounded-lg text-xs font-medium"
             >
               {downloadingExcel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              <span>Export Excel (6 Sheets)</span>
+              <span>Export Excel</span>
             </button>
             <button
               onClick={() => logout()}
@@ -356,7 +367,7 @@ export default function AdminDashboard() {
             <div className="text-xl sm:text-2xl font-bold text-red-700">
               {summary ? summary.absentCount : '0'}
             </div>
-            <div className="text-[10px] sm:text-[11px] text-[#737373] mt-1 truncate">After {policy?.morningEnd ?? '—'} IST</div>
+            <div className="text-[10px] sm:text-[11px] text-[#737373] mt-1 truncate">{(summary as any)?.notYetCount ?? 0} not yet marked · {(summary as any)?.lateCount ?? 0} late</div>
           </div>
         </div>
 
@@ -371,10 +382,13 @@ export default function AdminDashboard() {
                   : 'text-[#737373] hover:text-[#171717] hover:bg-white'
               }`}
             >
-              Live Attendance ({summary?.recordsSummary?.length || 0})
+              All Staff Attendance ({summary?.totalActiveEmployees ?? 0})
             </button>
             {([
-              ['tasks', 'Field Task Planner'],
+              ['tasks', 'Field Route Planner'],
+              ['camps', 'Camps'],
+              ['shifts', 'Shifts'],
+              ['customers', 'Customers'],
               ['approvals', `Approvals (${(summary as any)?.pendingApprovals ?? 0})`],
               ['late', `Late Requests (${(summary as any)?.pendingLateRequests ?? 0})`],
             ] as const).map(([id, label]) => (
@@ -417,7 +431,7 @@ export default function AdminDashboard() {
                   : 'text-[#737373] hover:text-[#171717] hover:bg-white'
               }`}
             >
-              Branches & Geofences ({branches.length})
+              Locations & Geofences ({branches.length})
             </button>
             <button
               onClick={() => setActiveTab('corrections')}
@@ -461,221 +475,27 @@ export default function AdminDashboard() {
         {/* Tab: Analytics Intelligence */}
         {activeTab === 'analytics' && <AnalyticsView />}
 
-        {/* Tab 1: Live Attendance */}
+        {/* Tab 1: All staff attendance (every employee, by category & location) */}
         {activeTab === 'attendance' && (
-          <div className="bg-white border border-[#E5E5E5] rounded-xl overflow-hidden shadow-xs">
-            <div className="px-5 py-4 border-b border-[#E5E5E5] flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-sm text-[#171717]">Today&apos;s Attendance Stream</h3>
-                <p className="text-xs text-[#737373]">Live GPS geofence verifications and check-out work reports</p>
-              </div>
-              <span className="text-xs font-bold text-[#171717] bg-neutral-100 px-2.5 py-1 rounded-full">
-                {summary?.recordsSummary?.length || 0} Records
-              </span>
-            </div>
+          <AttendanceBoard
+            refreshKey={boardRefresh}
+            onEditRecord={(rec) => setEditingAttendance(rec)}
+            onDeleteRecord={(rec) =>
+              setDeletingItem({
+                type: 'attendance',
+                id: rec.id,
+                name: `Attendance record of ${rec.employee?.fullName}`,
+                warning: 'This will delete this check-in/out record from the database.',
+              })
+            }
+          />
+        )}
 
-            {!summary || summary.recordsSummary?.length === 0 ? (
-              <div className="px-5 py-12 text-center text-xs text-[#737373]">
-                No check-in activity recorded yet for today.
-              </div>
-            ) : (
-              <>
-                {/* Mobile Cards View (< 640px) */}
-                <div className="block sm:hidden divide-y divide-[#E5E5E5] p-3 space-y-3">
-                  {summary.recordsSummary.map((rec) => (
-                    <div
-                      key={rec.id}
-                      className="bg-[#FBFBFA] border border-[#E5E5E5] rounded-xl p-3.5 space-y-2.5 shadow-2xs"
-                    >
-                      <div className="flex items-start justify-between border-b border-[#EAE9E4] pb-2">
-                        <div>
-                          <div className="font-bold text-xs text-[#171717]">{rec.employee.fullName}</div>
-                          <div className="text-[11px] text-[#737373] font-mono">
-                            {rec.employee.employeeCode} • {rec.employee.employeeType}
-                          </div>
-                        </div>
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
-                            rec.status === 'CHECKED_OUT'
-                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                              : rec.status === 'CORRECTED'
-                              ? 'bg-blue-50 text-blue-800 border border-blue-200'
-                              : 'bg-amber-50 text-amber-800 border border-amber-200'
-                          }`}
-                        >
-                          {rec.status}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-[11px] bg-white p-2 rounded-lg border border-[#EAE9E4]">
-                        <div>
-                          <span className="text-[#737373] block text-[10px] uppercase font-medium">Check-In</span>
-                          <strong className="text-[#171717]">
-                            {rec.checkInAt
-                              ? new Date(rec.checkInAt).toLocaleTimeString('en-IN', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  timeZone: 'Asia/Kolkata',
-                                })
-                              : '—'}
-                          </strong>
-                        </div>
-                        <div>
-                          <span className="text-[#737373] block text-[10px] uppercase font-medium">Check-Out</span>
-                          <strong className="text-[#171717]">
-                            {rec.checkOutAt
-                              ? new Date(rec.checkOutAt).toLocaleTimeString('en-IN', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  timeZone: 'Asia/Kolkata',
-                                })
-                              : 'Pending'}
-                          </strong>
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-[#737373] space-y-1">
-                        <div>
-                          Location: <strong className="text-[#171717]">{rec.checkInLocationName || 'Branch'}</strong>
-                          {rec.checkInDistanceMetres !== null && (
-                            <span className="text-[10px] text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.2 rounded ml-1.5">
-                              {Number(rec.checkInDistanceMetres)}m from pin
-                            </span>
-                          )}
-                        </div>
-                        {rec.workReport && (
-                          <div className="italic text-[#171717] bg-white p-2 rounded border border-[#EAE9E4] text-[11px]">
-                            &quot;{rec.workReport}&quot;
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="pt-1.5 flex items-center justify-end space-x-2 border-t border-[#EAE9E4]">
-                        <button
-                          onClick={() => setEditingAttendance(rec)}
-                          className="flex items-center space-x-1 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
-                        >
-                          <Edit2 className="w-3 h-3" />
-                          <span>Edit</span>
-                        </button>
-                        <button
-                          onClick={() =>
-                            setDeletingItem({
-                              type: 'attendance',
-                              id: rec.id,
-                              name: `Attendance record of ${rec.employee?.fullName}`,
-                              warning: 'This will delete this check-in/out record from the database.',
-                            })
-                          }
-                          className="flex items-center space-x-1 px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Desktop Table View (>= 640px) */}
-                <div className="hidden sm:block overflow-x-auto">
-                  <table className="w-full text-left text-xs min-w-[700px]">
-                    <thead className="bg-[#F7F6F2] border-b border-[#E5E5E5] text-[#737373] uppercase tracking-wider">
-                      <tr>
-                        <th className="px-5 py-3 font-semibold">Staff Code</th>
-                        <th className="px-5 py-3 font-semibold">Employee</th>
-                        <th className="px-5 py-3 font-semibold">Duty Location</th>
-                        <th className="px-5 py-3 font-semibold">Check-In</th>
-                        <th className="px-5 py-3 font-semibold">Check-Out</th>
-                        <th className="px-5 py-3 font-semibold">Status</th>
-                        <th className="px-5 py-3 font-semibold">Work Report</th>
-                        <th className="px-5 py-3 font-semibold text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#E5E5E5]">
-                      {summary.recordsSummary.map((rec) => (
-                        <tr key={rec.id} className="hover:bg-[#F9F9F8]">
-                          <td className="px-5 py-3.5 font-mono font-medium text-[#171717]">
-                            {rec.employee.employeeCode}
-                          </td>
-                          <td className="px-5 py-3.5 font-medium text-[#171717]">
-                            {rec.employee.fullName}
-                            <div className="text-[11px] text-[#737373]">{rec.employee.employeeType}</div>
-                          </td>
-                          <td className="px-5 py-3.5 text-[#171717]">
-                            {rec.checkInLocationName || 'Branch'}
-                            {rec.checkInDistanceMetres !== null && (
-                              <span className="text-[11px] text-[#737373] block">
-                                Offset: {Number(rec.checkInDistanceMetres)}m
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-5 py-3.5 text-[#171717]">
-                            {rec.checkInAt
-                              ? new Date(rec.checkInAt).toLocaleTimeString('en-IN', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  timeZone: 'Asia/Kolkata',
-                                })
-                              : '—'}
-                          </td>
-                          <td className="px-5 py-3.5 text-[#171717]">
-                            {rec.checkOutAt
-                              ? new Date(rec.checkOutAt).toLocaleTimeString('en-IN', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  timeZone: 'Asia/Kolkata',
-                                })
-                              : 'Pending'}
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
-                                rec.status === 'CHECKED_OUT'
-                                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                  : rec.status === 'CORRECTED'
-                                  ? 'bg-blue-50 text-blue-800 border border-blue-200'
-                                  : 'bg-amber-50 text-amber-800 border border-amber-200'
-                              }`}
-                            >
-                              {rec.status}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3.5 text-[#737373] max-w-xs truncate italic">
-                            {rec.workReport || 'Pending Check-Out'}
-                          </td>
-                          <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end space-x-1.5">
-                              <button
-                                onClick={() => setEditingAttendance(rec)}
-                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                title="Edit Record"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  setDeletingItem({
-                                    type: 'attendance',
-                                    id: rec.id,
-                                    name: `Attendance record of ${rec.employee?.fullName}`,
-                                    warning: 'This will delete this check-in/out record from the database.',
-                                  })
-                                }
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title="Delete Record"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
+        {activeTab === 'shifts' && <ShiftsPanel branches={branches} />}
+        {activeTab === 'camps' && <CampsPanel employees={employees} branches={branches} />}
+        {activeTab === 'customers' && (
+          <div className="max-w-3xl">
+            <CustomersView admin branches={branches} />
           </div>
         )}
 
@@ -691,7 +511,7 @@ export default function AdminDashboard() {
                   </span>
                 </h3>
                 <p className="text-xs text-[#737373]">
-                  Office Staff & Field Staff registered across LABE Andhra Pradesh branches
+                  All staff by category: office, distribution centres, field, pharmacy, laboratory and leadership
                 </p>
               </div>
               <button
@@ -727,12 +547,12 @@ export default function AdminDashboard() {
                         <div className="flex flex-col items-end space-y-1">
                           <span
                             className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
-                              emp.employeeType === 'OFFICE_STAFF'
-                                ? 'bg-blue-50 text-blue-800 border border-blue-200'
-                                : 'bg-purple-50 text-purple-800 border border-purple-200'
+                              emp.employeeType === 'FIELD_STAFF'
+                                ? 'bg-purple-50 text-purple-800 border border-purple-200'
+                                : 'bg-blue-50 text-blue-800 border border-blue-200'
                             }`}
                           >
-                            {emp.employeeType}
+                            {categoryInfo(emp.staffCategory)?.label ?? emp.employeeType}
                           </span>
                           <span
                             className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-semibold ${
@@ -752,13 +572,24 @@ export default function AdminDashboard() {
                           <span>
                             Branch:{' '}
                             <strong className="text-[#171717]">
-                              {emp.assignedBranch ? emp.assignedBranch.name : emp.employeeType === 'FIELD_STAFF' ? 'Field (daily tasks)' : '—'}
+                              {emp.assignedBranch ? emp.assignedBranch.name : emp.staffCategory === 'LEADERSHIP' ? 'Office / anywhere' : emp.employeeType === 'FIELD_STAFF' ? 'Field route' : '—'}
                             </strong>
                           </span>
                         </div>
                         <div>
                           Mobile: <strong className="text-[#171717] font-mono">{emp.mobile}</strong>
                         </div>
+                        {(emp.designation || emp.dateOfJoining) && (
+                          <div>
+                            {emp.designation && <strong className="text-[#171717]">{emp.designation}</strong>}
+                            {emp.dateOfJoining && <span> · DOJ {fmtDate(emp.dateOfJoining)}</span>}
+                          </div>
+                        )}
+                        {emp.shift && (
+                          <div>
+                            Shift: <strong className="text-[#171717]">{emp.shift.name} {emp.shift.startTime}–{emp.shift.endTime}</strong>
+                          </div>
+                        )}
                       </div>
 
                       <div className="pt-2 flex items-center justify-end space-x-2 border-t border-[#EAE9E4]">
@@ -810,7 +641,8 @@ export default function AdminDashboard() {
                         <th className="px-5 py-3 font-semibold">Code</th>
                         <th className="px-5 py-3 font-semibold">Full Name</th>
                         <th className="px-5 py-3 font-semibold">Category</th>
-                        <th className="px-5 py-3 font-semibold">Assigned Branch</th>
+                        <th className="px-5 py-3 font-semibold">Designation / DOJ</th>
+                        <th className="px-5 py-3 font-semibold">Location / Shift</th>
                         <th className="px-5 py-3 font-semibold">Mobile</th>
                         <th className="px-5 py-3 font-semibold">Status</th>
                         <th className="px-5 py-3 font-semibold text-right">Actions</th>
@@ -827,13 +659,19 @@ export default function AdminDashboard() {
                           <td className="px-5 py-3.5">
                             <span
                               className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
-                                emp.employeeType === 'OFFICE_STAFF'
+                                emp.employeeType === 'FIELD_STAFF'
+                                  ? 'bg-purple-50 text-purple-800 border border-purple-200'
+                                  : emp.employeeType === 'OFFICE_STAFF'
                                   ? 'bg-blue-50 text-blue-800 border border-blue-200'
-                                  : 'bg-purple-50 text-purple-800 border border-purple-200'
+                                  : 'bg-neutral-100 text-neutral-700 border border-neutral-200'
                               }`}
                             >
-                              {emp.employeeType}
+                              {categoryInfo(emp.staffCategory)?.label ?? emp.employeeType.replace('_', ' ')}
                             </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-[#171717]">
+                            {emp.designation || <span className="text-[#A3A3A3]">—</span>}
+                            {emp.dateOfJoining && <div className="text-[11px] text-[#737373]">DOJ {fmtDate(emp.dateOfJoining)}</div>}
                           </td>
                           <td className="px-5 py-3.5 text-[#171717]">
                             {emp.assignedBranch ? (
@@ -842,7 +680,12 @@ export default function AdminDashboard() {
                                 <span>{emp.assignedBranch.name}</span>
                               </div>
                             ) : (
-                              <span className="text-[#737373] italic">{emp.employeeType === 'FIELD_STAFF' ? 'Field (daily tasks)' : '—'}</span>
+                              <span className="text-[#737373] italic">{emp.staffCategory === 'LEADERSHIP' ? 'Office / anywhere' : emp.employeeType === 'FIELD_STAFF' ? 'Field route' : '—'}</span>
+                            )}
+                            {emp.shift && (
+                              <div className="text-[11px] text-[#737373]">
+                                {emp.shift.name} {emp.shift.startTime}–{emp.shift.endTime}
+                              </div>
                             )}
                           </td>
                           <td className="px-5 py-3.5 text-[#737373] font-mono">{emp.mobile}</td>
@@ -914,13 +757,13 @@ export default function AdminDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-4 rounded-xl border border-[#E5E5E5] gap-3">
               <div>
                 <h3 className="font-semibold text-sm text-[#171717] flex items-center space-x-2">
-                  <span>Pharmacy Branch Network</span>
+                  <span>Work Locations</span>
                   <span className="px-2 py-0.5 bg-neutral-100 text-[#171717] rounded-full text-[11px] font-bold">
-                    {branches.length} Active {branches.length === 1 ? 'Branch' : 'Branches'}
+                    {branches.length} {branches.length === 1 ? 'Location' : 'Locations'}
                   </span>
                 </h3>
                 <p className="text-xs text-[#737373]">
-                  GPS geofencing centers and active boundaries across Andhra Pradesh
+                  Head office, regional office, distribution centres, pharmacies and labs, each with a radius or exact-boundary geofence
                 </p>
               </div>
               <div className="flex items-center space-x-2 w-full sm:w-auto">
@@ -947,7 +790,7 @@ export default function AdminDashboard() {
                   className="inline-flex items-center space-x-1 px-3 py-1.5 bg-[#171717] hover:bg-black text-white rounded-lg text-xs font-medium transition-colors shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Add Branch</span>
+                  <span>Add Location</span>
                 </button>
               </div>
             </div>
@@ -957,7 +800,7 @@ export default function AdminDashboard() {
                 <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mx-auto text-[#737373]">
                   <Building2 className="w-6 h-6" />
                 </div>
-                <div className="text-sm font-semibold text-[#171717]">No Pharmacy Branches Found</div>
+                <div className="text-sm font-semibold text-[#171717]">No Work Locations Yet</div>
                 <p className="text-xs text-[#737373] max-w-sm mx-auto">
                   Create your first pharmacy branch location with a GPS geofence anchor point to start tracking attendance.
                 </p>
@@ -966,7 +809,7 @@ export default function AdminDashboard() {
                   className="inline-flex items-center space-x-1.5 px-4 py-2 bg-[#171717] hover:bg-black text-white rounded-lg text-xs font-medium transition-colors"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Add First Branch</span>
+                  <span>Add First Location</span>
                 </button>
               </div>
             ) : (
@@ -1007,6 +850,7 @@ export default function AdminDashboard() {
                           <div className="flex items-start justify-between border-b border-[#E5E5E5] pb-2.5">
                             <div>
                               <div className="font-bold text-sm text-[#171717]">{b.name}</div>
+                              <div className="text-[11px] text-[#737373]">{locationTypeLabel(b.locationType)}</div>
                               <div className="flex items-center space-x-2 mt-0.5">
                                 <span className="text-[11px] font-mono text-[#737373] bg-neutral-100 px-1.5 py-0.5 rounded">
                                   {b.branchCode}
@@ -1070,10 +914,19 @@ export default function AdminDashboard() {
                                 <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                                 <span>{Number(b.latitude).toFixed(4)}°, {Number(b.longitude).toFixed(4)}°</span>
                               </div>
-                              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">
-                                {b.geofenceRadiusMetres}m radius
-                              </span>
+                              {b.geofenceShape === 'POLYGON' ? (
+                                <span className="text-[11px] font-bold text-red-700 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded truncate max-w-[50%]">
+                                  Boundary: {b.boundaryLabel || 'custom'}
+                                </span>
+                              ) : (
+                                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">
+                                  {b.geofenceRadiusMetres}m radius
+                                </span>
+                              )}
                             </div>
+                            {b.hasTerritory && (
+                              <div className="text-[11px] text-violet-700 font-semibold">Sales territory: {b.territoryLabel || 'custom'}</div>
+                            )}
                             <div className="flex items-center justify-between text-[11px] text-[#737373] pt-1 border-t border-[#EAE9E4]">
                               <span>
                                 {b.activeEmployeeCount !== undefined

@@ -21,10 +21,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const refreshUser = async () => {
+    // Every sign-in stores the token; without one there is no session to restore, so skip the
+    // request instead of logging a 401 in the console on the login page.
+    if (typeof window !== 'undefined' && !localStorage.getItem('labe_token') && !localStorage.getItem('laba_token')) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
     try {
       const res = await apiClient.get('/auth/me');
       setUser(res.data.data);
-    } catch {
+    } catch (err: any) {
+      if (err?.response?.status === 401 && typeof window !== 'undefined') {
+        localStorage.removeItem('labe_token');
+        localStorage.removeItem('laba_token');
+      }
       setUser(null);
     } finally {
       setLoading(false);

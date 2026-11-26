@@ -13,6 +13,8 @@ export interface EmployeeProfile {
   fullName: string;
   mobile: string;
   employeeType: UserRole;
+  staffCategory?: string | null;
+  designation?: string | null;
   status: 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED';
   assignedBranch: AssignedBranch | null;
 }

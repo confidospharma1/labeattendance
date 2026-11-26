@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { UserCheck, UserX, Loader2, Inbox, ScanFace, RotateCcw } from 'lucide-react';
 import { apiClient, apiErrorMessage } from '@/lib/api';
+import { CATEGORIES, categoryInfo, locationTypeLabel } from '@/lib/staff';
 
 interface Props {
   branches: any[];
@@ -10,22 +11,37 @@ interface Props {
   onChanged: () => void;
 }
 
+interface Choice {
+  staffCategory: string;
+  branchId: string;
+  shiftId: string;
+}
+
 export function ApprovalsPanel({ branches, employees, onChanged }: Props) {
   const [pending, setPending] = useState<any[]>([]);
+  const [shifts, setShifts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [choices, setChoices] = useState<Record<string, { employeeType: string; branchId: string }>>({});
+  const [choices, setChoices] = useState<Record<string, Choice>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/employees/pending');
+      const [res, sh] = await Promise.all([apiClient.get('/employees/pending'), apiClient.get('/shifts').catch(() => ({ data: { data: [] } }))]);
       const list = res.data.data || [];
       setPending(list);
+      setShifts((sh.data.data || []).filter((s: any) => s.isActive));
       setChoices(
         Object.fromEntries(
-          list.map((e: any) => [e.id, { employeeType: e.employeeType, branchId: e.branchAssignments?.[0]?.branch?.id || '' }])
+          list.map((e: any) => [
+            e.id,
+            {
+              staffCategory: e.staffCategory || (e.employeeType === 'FIELD_STAFF' ? 'MARKETING_EXECUTIVE' : 'HEAD_OFFICE'),
+              branchId: e.branchAssignments?.[0]?.branch?.id || '',
+              shiftId: '',
+            },
+          ])
         )
       );
     } catch (err) {
@@ -48,7 +64,7 @@ export function ApprovalsPanel({ branches, employees, onChanged }: Props) {
       body = { reason };
     } else {
       const c = choices[id];
-      body = { employeeType: c.employeeType, ...(c.employeeType === 'OFFICE_STAFF' && c.branchId ? { branchId: c.branchId } : {}) };
+      body = { staffCategory: c.staffCategory, ...(c.branchId && { branchId: c.branchId }), ...(c.shiftId && { shiftId: c.shiftId }) };
     }
     setBusyId(id);
     try {
@@ -82,7 +98,10 @@ export function ApprovalsPanel({ branches, employees, onChanged }: Props) {
         ) : (
           <ul className="divide-y divide-[#F0EFEB]">
             {pending.map((e) => {
-              const c = choices[e.id] || { employeeType: e.employeeType, branchId: '' };
+              const c = choices[e.id] || { staffCategory: 'HEAD_OFFICE', branchId: '', shiftId: '' };
+              const info = categoryInfo(c.staffCategory);
+              const locs = branches.filter((b) => !info?.locationTypes || info.locationTypes.includes(b.locationType) || b.id === c.branchId);
+              const set = (patch: Partial<Choice>) => setChoices((s) => ({ ...s, [e.id]: { ...c, ...patch } }));
               return (
                 <li key={e.id} className="p-4 flex flex-col lg:flex-row lg:items-center gap-3">
                   <div className="flex-1 min-w-0">
@@ -92,33 +111,42 @@ export function ApprovalsPanel({ branches, employees, onChanged }: Props) {
                     <div className="text-xs text-[#737373]">
                       {e.user?.email} · {e.mobile} · registered {new Date(e.createdAt).toLocaleDateString('en-IN')}
                     </div>
+                    {(e.designation || e.dateOfJoining) && (
+                      <div className="text-xs text-[#525252]">
+                        {e.designation}
+                        {e.dateOfJoining && ` · DOJ ${String(e.dateOfJoining).slice(0, 10)}`}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <select
-                      value={c.employeeType}
-                      onChange={(ev) => setChoices((s) => ({ ...s, [e.id]: { ...c, employeeType: ev.target.value } }))}
-                      className="h-9 px-2 text-xs border border-[#E5E5E5] rounded-lg bg-white"
-                    >
-                      <option value="OFFICE_STAFF">Office staff</option>
-                      <option value="FIELD_STAFF">Field staff</option>
+                    <select value={c.staffCategory} onChange={(ev) => set({ staffCategory: ev.target.value })} className="h-9 px-2 text-xs border border-[#E5E5E5] rounded-lg bg-white">
+                      {CATEGORIES.map((k) => (
+                        <option key={k.value} value={k.value}>
+                          {k.label}
+                        </option>
+                      ))}
                     </select>
-                    {c.employeeType === 'OFFICE_STAFF' && (
-                      <select
-                        value={c.branchId}
-                        onChange={(ev) => setChoices((s) => ({ ...s, [e.id]: { ...c, branchId: ev.target.value } }))}
-                        className="h-9 px-2 text-xs border border-[#E5E5E5] rounded-lg bg-white max-w-[14rem]"
-                      >
-                        <option value="">Select branch</option>
-                        {branches.map((b) => (
-                          <option key={b.id} value={b.id}>
-                            {b.name}
+                    <select value={c.branchId} onChange={(ev) => set({ branchId: ev.target.value })} className="h-9 px-2 text-xs border border-[#E5E5E5] rounded-lg bg-white max-w-[14rem]">
+                      <option value="">{info?.locationRequired ? 'Select location' : 'No location'}</option>
+                      {locs.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} · {locationTypeLabel(b.locationType)}
+                        </option>
+                      ))}
+                    </select>
+                    {shifts.length > 0 && (
+                      <select value={c.shiftId} onChange={(ev) => set({ shiftId: ev.target.value })} className="h-9 px-2 text-xs border border-[#E5E5E5] rounded-lg bg-white max-w-[12rem]">
+                        <option value="">No shift</option>
+                        {shifts.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} {s.startTime}–{s.endTime}
                           </option>
                         ))}
                       </select>
                     )}
                     <button
                       onClick={() => act(e.id, 'approve')}
-                      disabled={busyId === e.id || (c.employeeType === 'OFFICE_STAFF' && !c.branchId)}
+                      disabled={busyId === e.id || (!!info?.locationRequired && !c.branchId)}
                       className="h-9 px-3 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-40"
                     >
                       {busyId === e.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserCheck className="w-3.5 h-3.5" />}
@@ -198,6 +226,7 @@ function FaceAdmin({ employees }: { employees: any[] }) {
           </button>
         )}
       </div>
+      {/* eslint-disable-next-line @next/next/no-img-element -- data URL, nothing for next/image to optimise */}
       {photo && <img src={photo} alt="Enrolled face" className="mt-3 w-32 h-24 object-cover rounded-lg border border-[#E5E5E5]" />}
       {msg && <div className="mt-3 text-xs text-[#525252]">{msg}</div>}
     </section>

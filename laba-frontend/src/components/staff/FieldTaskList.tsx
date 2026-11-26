@@ -15,7 +15,20 @@ import {
   CalendarX,
 } from 'lucide-react';
 import { apiClient, apiErrorMessage } from '@/lib/api';
+import { FenceMap } from '@/components/map/dynamic';
 import { useAttendanceProof, stepLabel } from './useAttendanceProof';
+
+const SURVEY_FIELDS: { key: string; label: string; type?: string; wide?: boolean }[] = [
+  { key: 'outletName', label: 'Outlet / doctor name' },
+  { key: 'outletType', label: 'Type (pharmacy, clinic…)' },
+  { key: 'contactPerson', label: 'Contact person' },
+  { key: 'contactMobile', label: 'Contact mobile', type: 'tel' },
+  { key: 'productsDiscussed', label: 'Products discussed', wide: true },
+  { key: 'orderValue', label: 'Order value (₹)', type: 'number' },
+  { key: 'nextVisitDate', label: 'Next visit', type: 'date' },
+  { key: 'competitorInfo', label: 'Competitor info', wide: true },
+  { key: 'feedback', label: 'Feedback', wide: true },
+];
 
 const STATUS_STYLE: Record<string, { label: string; cls: string }> = {
   PENDING: { label: 'To visit', cls: 'bg-slate-100 text-slate-700' },
@@ -26,10 +39,22 @@ const STATUS_STYLE: Record<string, { label: string; cls: string }> = {
   CANCELLED: { label: 'Cancelled', cls: 'bg-slate-100 text-slate-500' },
 };
 
-export function FieldTaskList({ data, faceRequired, onChange }: { data: any; faceRequired: boolean; onChange: () => void }) {
+export function FieldTaskList({
+  data,
+  faceRequired,
+  onChange,
+  survey = false,
+}: {
+  data: any;
+  faceRequired: boolean;
+  onChange: () => void;
+  /** Marketing executives record survey data when closing a stop. */
+  survey?: boolean;
+}) {
   const today: any[] = data?.today || [];
   const overdue: any[] = data?.overdue || [];
   const done = today.filter((t) => t.status === 'COMPLETED' || t.status === 'LATE_COMPLETED').length;
+  const route = today.filter((t) => t.status !== 'CANCELLED');
 
   return (
     <div className="space-y-4">
@@ -49,6 +74,20 @@ export function FieldTaskList({ data, faceRequired, onChange }: { data: any; fac
           Go to each location, check in inside the allowed radius, then write what you did before the deadline. Your day ends when the last task is
           completed.
         </p>
+        {route.length > 0 && (
+          <div className="mt-3">
+            <FenceMap
+              heightClass="h-52"
+              fences={route.map((t) => ({ ...t, shape: t.geofenceShape, label: `${t.sequence}. ${t.locationName}` }))}
+              route={route.map((t) => ({
+                latitude: t.latitude,
+                longitude: t.longitude,
+                label: `${t.sequence}. ${t.title}`,
+                color: t.status === 'COMPLETED' || t.status === 'LATE_COMPLETED' ? '#059669' : t.displayStatus === 'MISSED' ? '#DC2626' : '#0F766E',
+              }))}
+            />
+          </div>
+        )}
       </section>
 
       {today.length === 0 && (
@@ -59,14 +98,14 @@ export function FieldTaskList({ data, faceRequired, onChange }: { data: any; fac
       )}
 
       {today.map((t) => (
-        <TaskCard key={t.id} task={t} faceRequired={faceRequired} onChange={onChange} />
+        <TaskCard key={t.id} task={t} faceRequired={faceRequired} onChange={onChange} survey={survey} />
       ))}
 
       {overdue.length > 0 && (
         <>
           <h3 className="text-sm font-semibold text-slate-700 pt-2">Unfinished tasks from earlier days</h3>
           {overdue.map((t) => (
-            <TaskCard key={t.id} task={t} faceRequired={faceRequired} onChange={onChange} />
+            <TaskCard key={t.id} task={t} faceRequired={faceRequired} onChange={onChange} survey={survey} />
           ))}
         </>
       )}
@@ -74,10 +113,11 @@ export function FieldTaskList({ data, faceRequired, onChange }: { data: any; fac
   );
 }
 
-function TaskCard({ task, faceRequired, onChange }: { task: any; faceRequired: boolean; onChange: () => void }) {
+function TaskCard({ task, faceRequired, onChange, survey }: { task: any; faceRequired: boolean; onChange: () => void; survey?: boolean }) {
   const { step, setStep, collect, faceModal } = useAttendanceProof();
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [lateReason, setLateReason] = useState('');
   const [showLate, setShowLate] = useState(false);
   const [sendingLate, setSendingLate] = useState(false);
@@ -104,8 +144,14 @@ function TaskCard({ task, faceRequired, onChange }: { task: any; faceRequired: b
     try {
       const gps = await collect({ face: false, faceTitle: '' });
       setStep('sending');
-      await apiClient.post(`/field-tasks/${task.id}/complete`, { ...gps, completionNote: note });
+      const filled = Object.fromEntries(Object.entries(answers).filter(([, v]) => v.trim() !== ''));
+      await apiClient.post(`/field-tasks/${task.id}/complete`, {
+        ...gps,
+        completionNote: note,
+        ...(survey && Object.keys(filled).length > 0 && { survey: filled }),
+      });
       setNote('');
+      setAnswers({});
       onChange();
     } catch (err) {
       setError(apiErrorMessage(err));
@@ -164,7 +210,8 @@ function TaskCard({ task, faceRequired, onChange }: { task: any; faceRequired: b
             <Clock className="w-3.5 h-3.5" /> Due {deadlineLabel}
           </span>
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-slate-700">
-            <Navigation className="w-3.5 h-3.5" /> Within {task.radiusMetres} m
+            <Navigation className="w-3.5 h-3.5" />{' '}
+            {task.geofenceShape === 'POLYGON' ? `Anywhere inside ${task.boundaryLabel || 'the boundary'}` : `Within ${task.radiusMetres} m`}
           </span>
           <a
             href={mapsUrl}
@@ -227,6 +274,25 @@ function TaskCard({ task, faceRequired, onChange }: { task: any; faceRequired: b
                 placeholder="What did you do at this location? (min 10 characters)"
                 className="w-full rounded-xl border border-slate-300 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
+              {survey && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-3 space-y-2">
+                  <div className="text-xs font-semibold text-blue-900">Survey (optional)</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {SURVEY_FIELDS.map((f) => (
+                      <input
+                        key={f.key}
+                        type={f.type || 'text'}
+                        inputMode={f.type === 'tel' ? 'tel' : f.type === 'number' ? 'decimal' : undefined}
+                        value={answers[f.key] || ''}
+                        onChange={(e) => setAnswers((a) => ({ ...a, [f.key]: e.target.value }))}
+                        placeholder={f.label}
+                        aria-label={f.label}
+                        className={`${f.wide ? 'col-span-2' : ''} w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
               <button
                 onClick={complete}
                 disabled={busy || note.trim().length < 10}

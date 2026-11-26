@@ -1,14 +1,12 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
 import { Plus, Trash2, Copy, Loader2, MapPin, Clock, Navigation, CheckCircle2, X, Image as ImageIcon } from 'lucide-react';
 import { apiClient, apiErrorMessage } from '@/lib/api';
+import { GeofenceEditor, FenceMap } from '@/components/map/dynamic';
+import { FenceValue } from '@/lib/geo';
+import { categoryInfo } from '@/lib/staff';
 
-const BranchMapPicker = dynamic(() => import('@/components/branch/BranchMapPicker'), {
-  ssr: false,
-  loading: () => <div className="w-full h-72 bg-[#F0EFEB] rounded-xl animate-pulse" />,
-});
 
 const istToday = () => new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
 const shiftDate = (d: string, days: number) => new Date(new Date(`${d}T00:00:00Z`).getTime() + days * 86400_000).toISOString().slice(0, 10);
@@ -30,11 +28,15 @@ const emptyForm = {
   latitude: 14.4673,
   longitude: 78.8242,
   radiusMetres: 100,
+  shape: 'CIRCLE' as FenceValue['shape'],
+  boundary: null as FenceValue['boundary'],
+  boundaryLabel: null as string | null,
   deadlineTime: '17:00',
 };
 
 export function TaskPlanner({ employees, initialEmployeeId }: { employees: any[]; initialEmployeeId?: string }) {
   const fieldStaff = useMemo(() => employees.filter((e) => e.employeeType === 'FIELD_STAFF' && e.status === 'ACTIVE'), [employees]);
+  const [showRoute, setShowRoute] = useState(true);
   const [date, setDate] = useState(istToday());
   const [employeeId, setEmployeeId] = useState(initialEmployeeId || '');
   const [tasks, setTasks] = useState<any[]>([]);
@@ -71,14 +73,18 @@ export function TaskPlanner({ employees, initialEmployeeId }: { employees: any[]
     setError(null);
     setSaving(true);
     try {
+      const { shape, ...rest } = form;
       await apiClient.post('/field-tasks', {
         employeeId,
         taskDate: date,
-        ...form,
+        ...rest,
+        geofenceShape: shape,
+        boundary: shape === 'POLYGON' ? form.boundary : null,
+        boundaryLabel: shape === 'POLYGON' ? form.boundaryLabel : null,
         description: form.description || undefined,
         address: form.address || undefined,
       });
-      setForm((f) => ({ ...emptyForm, latitude: f.latitude, longitude: f.longitude, radiusMetres: f.radiusMetres, deadlineTime: f.deadlineTime }));
+      setForm((f) => ({ ...emptyForm, latitude: f.latitude, longitude: f.longitude, radiusMetres: f.radiusMetres, shape: f.shape, boundary: f.boundary, boundaryLabel: f.boundaryLabel, deadlineTime: f.deadlineTime }));
       setShowForm(false);
       load();
     } catch (err) {
@@ -130,7 +136,7 @@ export function TaskPlanner({ employees, initialEmployeeId }: { employees: any[]
     return Array.from(map.values());
   }, [tasks]);
 
-  const valid = employeeId && form.title.trim().length >= 3 && form.locationName.trim().length >= 2;
+  const valid = employeeId && form.title.trim().length >= 3 && form.locationName.trim().length >= 2 && (form.shape === 'CIRCLE' || !!form.boundary);
 
   return (
     <div className="space-y-4">
@@ -160,6 +166,9 @@ export function TaskPlanner({ employees, initialEmployeeId }: { employees: any[]
           >
             <Copy className="w-3.5 h-3.5" /> Copy previous day
           </button>
+          <button onClick={() => setShowRoute((v) => !v)} className="h-10 px-3 rounded-lg border border-[#E5E5E5] text-xs font-semibold">
+            {showRoute ? 'Hide' : 'Show'} route maps
+          </button>
           <button
             onClick={() => setShowForm(true)}
             disabled={!employeeId}
@@ -188,41 +197,18 @@ export function TaskPlanner({ employees, initialEmployeeId }: { employees: any[]
             <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Address (optional)" className="md:col-span-2 h-10 px-3 text-sm border border-[#E5E5E5] rounded-lg" />
           </div>
 
-          <div className="grid md:grid-cols-3 gap-3">
-            <label className="block md:col-span-2">
-              <span className="text-xs font-semibold text-[#525252]">Allowed radius: {form.radiusMetres} m</span>
-              <input
-                type="range"
-                min={10}
-                max={1000}
-                step={10}
-                value={form.radiusMetres}
-                onChange={(e) => setForm({ ...form, radiusMetres: Number(e.target.value) })}
-                className="w-full accent-brand-700"
-              />
-              <div className="flex gap-1.5 mt-1">
-                {[30, 50, 100, 200, 500].map((r) => (
-                  <button key={r} type="button" onClick={() => setForm({ ...form, radiusMetres: r })} className={`px-2 py-0.5 rounded text-[11px] border ${form.radiusMetres === r ? 'bg-brand-700 text-white border-brand-700' : 'border-[#E5E5E5]'}`}>
-                    {r} m
-                  </button>
-                ))}
-              </div>
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold text-[#525252]">Deadline (IST)</span>
-              <input type="time" value={form.deadlineTime} onChange={(e) => setForm({ ...form, deadlineTime: e.target.value })} className="mt-1 h-10 px-3 text-sm border border-[#E5E5E5] rounded-lg w-full" />
-            </label>
-          </div>
+          <label className="block max-w-xs">
+            <span className="text-xs font-semibold text-[#525252]">Deadline (IST)</span>
+            <input type="time" value={form.deadlineTime} onChange={(e) => setForm({ ...form, deadlineTime: e.target.value })} className="mt-1 h-10 px-3 text-sm border border-[#E5E5E5] rounded-lg w-full" />
+          </label>
 
           <div>
-            <div className="text-xs font-semibold text-[#525252] mb-1">
-              Tap the map to set the exact location ({form.latitude.toFixed(5)}, {form.longitude.toFixed(5)})
-            </div>
-            <BranchMapPicker
-              latitude={form.latitude}
-              longitude={form.longitude}
-              radiusMetres={form.radiusMetres}
-              onChange={(c) => setForm((f) => ({ ...f, latitude: c.latitude, longitude: c.longitude }))}
+            <div className="text-xs font-semibold text-[#525252] mb-1">Stop geofence: a radius around the outlet, or the exact village / area boundary</div>
+            <GeofenceEditor
+              value={{ latitude: form.latitude, longitude: form.longitude, radiusMetres: form.radiusMetres, shape: form.shape, boundary: form.boundary, boundaryLabel: form.boundaryLabel }}
+              onChange={(v) => setForm((f) => ({ ...f, ...v, locationName: f.locationName || (v.shape === 'POLYGON' && v.boundaryLabel ? v.boundaryLabel : f.locationName) }))}
+              maxRadius={2000}
+              polygonHint="The executive can check in anywhere inside this area."
             />
           </div>
 
@@ -252,11 +238,23 @@ export function TaskPlanner({ employees, initialEmployeeId }: { employees: any[]
               <div className="px-4 py-3 border-b border-[#E5E5E5] flex items-center justify-between">
                 <div className="font-semibold text-sm">
                   {employee.fullName} <span className="font-mono text-xs text-[#737373]">{employee.employeeCode}</span>
+                  <span className="ml-1 text-[11px] font-normal text-[#737373]">{categoryInfo(employees.find((e) => e.id === employee.id)?.staffCategory)?.label ?? ''}</span>
                 </div>
                 <span className="text-xs text-[#737373]">
                   {done}/{list.length} completed
                 </span>
               </div>
+              {showRoute && (
+                <div className="p-3 border-b border-[#F0EFEB]">
+                  <FenceMap
+                    heightClass="h-60"
+                    fences={list.filter((t) => t.status !== 'CANCELLED').map((t) => ({ ...t, shape: t.geofenceShape, label: `${t.sequence}. ${t.locationName}` }))}
+                    route={list
+                      .filter((t) => t.status !== 'CANCELLED')
+                      .map((t) => ({ latitude: t.latitude, longitude: t.longitude, label: `${t.sequence}. ${t.title}`, color: t.status === 'COMPLETED' || t.status === 'LATE_COMPLETED' ? '#059669' : t.displayStatus === 'MISSED' ? '#DC2626' : '#0F766E' }))}
+                  />
+                </div>
+              )}
               <ul className="divide-y divide-[#F0EFEB]">
                 {list.map((t) => (
                   <li key={t.id} className="p-4 flex flex-col md:flex-row gap-3">
@@ -272,7 +270,7 @@ export function TaskPlanner({ employees, initialEmployeeId }: { employees: any[]
                           <MapPin className="w-3 h-3" /> {t.locationName}
                         </span>
                         <span className="inline-flex items-center gap-1">
-                          <Navigation className="w-3 h-3" /> {t.radiusMetres} m
+                          <Navigation className="w-3 h-3" /> {t.geofenceShape === 'POLYGON' ? `inside ${t.boundaryLabel || 'boundary'}` : `${t.radiusMetres} m`}
                         </span>
                         <span className="inline-flex items-center gap-1">
                           <Clock className="w-3 h-3" /> by {t.deadlineTime}
@@ -284,6 +282,15 @@ export function TaskPlanner({ employees, initialEmployeeId }: { employees: any[]
                           </span>
                         )}
                       </div>
+                      {t.surveyData && (
+                        <div className="text-[11px] bg-blue-50 text-blue-900 rounded-lg p-2 grid sm:grid-cols-2 gap-x-3">
+                          {Object.entries(t.surveyData).map(([k, v]) => (
+                            <div key={k}>
+                              <span className="text-blue-700">{k.replace(/([A-Z])/g, ' $1').toLowerCase()}:</span> {String(v)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       {t.completionNote && (
                         <div className="text-xs bg-emerald-50 text-emerald-900 rounded-lg p-2 flex gap-1.5">
                           <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {t.completionNote}
@@ -312,6 +319,7 @@ export function TaskPlanner({ employees, initialEmployeeId }: { employees: any[]
 
       {selfie && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setSelfie(null)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={selfie} alt="Visit selfie" className="max-w-xs w-full rounded-xl border-4 border-white" />
         </div>
       )}
