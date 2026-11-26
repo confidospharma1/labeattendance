@@ -1,34 +1,24 @@
-import { PrismaClient, EmployeeType } from '@prisma/client';
+import { PrismaClient, EmployeeType, StaffCategory } from '@prisma/client';
+import { codePrefixFor } from './staff';
+
+type Tx = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
 /**
- * Generates sequential, collision-free employee codes like LABE-OS-001 or LABE-FS-001.
+ * Generates sequential, collision-free employee codes per staff category,
+ * e.g. LABE-HO-001 (head office), LABE-SE-004 (sales executive), LABE-OS-002 (legacy office staff).
  */
 export async function generateNextEmployeeCode(
-  tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>,
-  employeeType: EmployeeType
+  tx: Tx,
+  employeeType: EmployeeType,
+  category?: StaffCategory | null
 ): Promise<string> {
-  const prefix = employeeType === 'FIELD_STAFF' ? 'LABE-FS' : 'LABE-OS';
+  const prefix = codePrefixFor(employeeType, category);
+  const count = await tx.employee.count({ where: { employeeCode: { startsWith: `${prefix}-` } } });
 
-  const count = await tx.employee.count({
-    where: {
-      employeeType,
-    },
-  });
-
-  const nextSeq = (count + 1).toString().padStart(3, '0');
-  const candidateCode = `${prefix}-${nextSeq}`;
-
-  // Check if candidate exists, if so increment sequence
-  const existing = await tx.employee.findUnique({
-    where: { employeeCode: candidateCode },
-  });
-
-  if (!existing) {
-    return candidateCode;
+  for (let seq = count + 1; seq < count + 50; seq++) {
+    const candidate = `${prefix}-${seq.toString().padStart(3, '0')}`;
+    const existing = await tx.employee.findUnique({ where: { employeeCode: candidate }, select: { id: true } });
+    if (!existing) return candidate;
   }
-
-  // Fallback timestamp suffix if collision occurs
-  const randomSuffix = Math.floor(100 + Math.random() * 900);
-  return `${prefix}-${nextSeq}-${randomSuffix}`;
+  return `${prefix}-${Date.now().toString().slice(-6)}`;
 }
-

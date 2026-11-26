@@ -62,6 +62,38 @@ enum AttendanceStatus {
 enum LocationRefType {
   BRANCH
   FIELD_TASK
+  TERRITORY // Sales executive: anywhere inside the distribution centre's territory
+  CAMP
+  ANYWHERE // Leadership (CEO / Director / Chief): no geofence, location recorded only
+}
+
+// Staff classification: who the person is and how they mark attendance
+enum StaffCategory {
+  HEAD_OFFICE // H.O.S - head office (Guntur): office geofence
+  REGIONAL_OFFICE // R.O.S - regional office (Tirupati): office geofence
+  DISTRIBUTION_CENTER // D.C.S - distribution centre staff: DC geofence
+  MARKETING_EXECUTIVE // M.E - field: restricted route (tasks) with survey data
+  SALES_EXECUTIVE // S.E - field: anywhere inside the allotted DC territory + customers
+  PHARMACY // Pharmacy hub & shop staff: shift-wise at their location
+  LABORATORY // Laboratory staff: shift-wise at their location
+  LEADERSHIP // CEO / Director / Chief staff: office or anywhere
+}
+
+// What kind of place a Branch row represents
+enum LocationType {
+  HEAD_OFFICE
+  REGIONAL_OFFICE
+  DISTRIBUTION_CENTER
+  PHARMACY_HUB
+  PHARMACY_SHOP
+  LABORATORY
+  OTHER
+}
+
+// Geofence geometry: a radius around a pin, or an exact boundary (GeoJSON polygon)
+enum GeofenceShape {
+  CIRCLE
+  POLYGON
 }
 
 enum CorrectionType {
@@ -98,6 +130,9 @@ model Organization {
   attendanceCorrections AttendanceCorrection[]
   auditLogs             AuditLog[]
   fieldTasks            FieldTask[]
+  shifts                Shift[]
+  camps                 Camp[]
+  customers             Customer[]
 
   @@map("organizations")
 }
@@ -128,6 +163,8 @@ model User {
   auditLogs                AuditLog[]
   createdEmployees         Employee[]             @relation("CreatedBy")
   createdBranches          Branch[]
+  createdCamps             Camp[]                 @relation("CampCreatedBy")
+  addedCustomers           Customer[]             @relation("CustomerAddedBy")
 
   @@index([email])
   @@index([organizationId])
@@ -143,6 +180,10 @@ model Employee {
   fullName        String         @map("full_name") @db.VarChar(255)
   mobile          String         @db.VarChar(15)
   employeeType    EmployeeType   @map("employee_type")
+  staffCategory   StaffCategory? @map("staff_category")
+  designation     String?        @db.VarChar(120)
+  dateOfJoining   DateTime?      @map("date_of_joining") @db.Date
+  shiftId         String?        @map("shift_id") @db.Uuid
   status          EmployeeStatus @default(ACTIVE)
   profileNotes    String?        @map("profile_notes") @db.Text
   selfRegistered  Boolean        @default(false) @map("self_registered")
@@ -158,6 +199,8 @@ model Employee {
   organization          Organization           @relation(fields: [organizationId], references: [id])
   createdBy             User                   @relation("CreatedBy", fields: [createdById], references: [id])
   approvedBy            User?                  @relation("ApprovedBy", fields: [approvedById], references: [id])
+  shift                 Shift?                 @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  campAssignments       CampAssignment[]
   branchAssignments     BranchAssignment[]
   fieldTasks            FieldTask[]
   faceProfile           FaceProfile?
@@ -168,31 +211,41 @@ model Employee {
   @@index([organizationId])
   @@index([employeeCode])
   @@index([employeeType])
+  @@index([staffCategory])
   @@index([status])
   @@map("employees")
 }
 
 model Branch {
-  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId       String   @map("organization_id") @db.Uuid
-  branchCode           String   @unique @map("branch_code") @db.VarChar(20)
-  name                 String   @db.VarChar(255)
-  address              String   @db.Text
-  district             String   @db.VarChar(100)
-  state                String   @default("Andhra Pradesh") @db.VarChar(100)
-  latitude             Decimal  @db.Decimal(10, 7)
-  longitude            Decimal  @db.Decimal(10, 7)
-  geofenceRadiusMetres Int      @default(100) @map("geofence_radius_metres")
-  managerEmployeeId    String?  @map("manager_employee_id") @db.Uuid
-  isActive             Boolean  @default(true) @map("is_active")
-  createdById          String   @map("created_by") @db.Uuid
-  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String        @map("organization_id") @db.Uuid
+  branchCode           String        @unique @map("branch_code") @db.VarChar(20)
+  name                 String        @db.VarChar(255)
+  address              String        @db.Text
+  district             String        @db.VarChar(100)
+  state                String        @default("Andhra Pradesh") @db.VarChar(100)
+  latitude             Decimal       @db.Decimal(10, 7)
+  longitude            Decimal       @db.Decimal(10, 7)
+  geofenceRadiusMetres Int           @default(100) @map("geofence_radius_metres")
+  locationType         LocationType  @default(PHARMACY_SHOP) @map("location_type")
+  geofenceShape        GeofenceShape @default(CIRCLE) @map("geofence_shape")
+  boundary             Json? // GeoJSON Polygon / MultiPolygon ([lng, lat]) when geofenceShape = POLYGON
+  boundaryLabel        String?       @map("boundary_label") @db.VarChar(255)
+  territory            Json? // Distribution centre sales territory (GeoJSON) for sales executives
+  territoryLabel       String?       @map("territory_label") @db.VarChar(255)
+  managerEmployeeId    String?       @map("manager_employee_id") @db.Uuid
+  isActive             Boolean       @default(true) @map("is_active")
+  createdById          String        @map("created_by") @db.Uuid
+  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
   organization Organization       @relation(fields: [organizationId], references: [id])
   createdBy    User               @relation(fields: [createdById], references: [id])
   manager      Employee?          @relation("BranchManager", fields: [managerEmployeeId], references: [id])
   assignments  BranchAssignment[]
+  shifts       Shift[]
+  camps        Camp[]
+  customers    Customer[]
 
   @@index([organizationId])
   @@index([branchCode])
@@ -235,6 +288,9 @@ model FieldTask {
   latitude       Decimal         @db.Decimal(10, 7)
   longitude      Decimal         @db.Decimal(10, 7)
   radiusMetres   Int             @default(100) @map("radius_metres")
+  geofenceShape  GeofenceShape   @default(CIRCLE) @map("geofence_shape")
+  boundary       Json? // GeoJSON polygon (e.g. a village boundary) when geofenceShape = POLYGON
+  boundaryLabel  String?         @map("boundary_label") @db.VarChar(255)
   deadlineTime   String          @map("deadline_time") @db.VarChar(5) // HH:MM IST on taskDate
   status         FieldTaskStatus @default(PENDING)
 
@@ -250,6 +306,7 @@ model FieldTask {
 
   // Completion proof
   completionNote         String?   @map("completion_note") @db.Text
+  surveyData             Json?     @map("survey_data") // Marketing executive survey captured at the stop
   completedAt            DateTime? @map("completed_at") @db.Timestamptz
   completeLat            Decimal?  @map("complete_lat") @db.Decimal(10, 7)
   completeLng            Decimal?  @map("complete_lng") @db.Decimal(10, 7)
@@ -335,6 +392,9 @@ model AttendanceRecord {
   workDate        DateTime         @map("work_date") @db.Date
   policyVersionId String           @map("policy_version_id") @db.Uuid
   status          AttendanceStatus @default(CHECKED_IN)
+  shiftId         String?          @map("shift_id") @db.Uuid
+  shiftName       String?          @map("shift_name") @db.VarChar(100)
+  isLate          Boolean          @default(false) @map("is_late")
 
   // Check-In Details
   checkInAt              DateTime?        @map("check_in_at") @db.Timestamptz
@@ -448,4 +508,116 @@ model Holiday {
   @@unique([organizationId, holidayDate])
   @@index([organizationId, holidayDate])
   @@map("holidays")
+}
+
+// Work shift for shift-wise attendance (pharmacy hubs & shops, laboratories, any location).
+// Times are IST wall-clock. A shift whose end is not after its start runs overnight.
+model Shift {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String   @map("organization_id") @db.Uuid
+  branchId              String?  @map("branch_id") @db.Uuid // null = usable at any location
+  name                  String   @db.VarChar(100)
+  startTime             String   @map("start_time") @db.VarChar(5)
+  endTime               String   @map("end_time") @db.VarChar(5)
+  checkInBeforeMinutes  Int      @default(30) @map("check_in_before_minutes") // window opens before start
+  lateGraceMinutes      Int      @default(15) @map("late_grace_minutes") // check-in after start + grace = late
+  checkInAfterMinutes   Int      @default(60) @map("check_in_after_minutes") // window closes after start
+  checkOutBeforeMinutes Int      @default(15) @map("check_out_before_minutes")
+  checkOutAfterMinutes  Int      @default(120) @map("check_out_after_minutes")
+  isActive              Boolean  @default(true) @map("is_active")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  employees    Employee[]
+
+  @@index([organizationId])
+  @@map("shifts")
+}
+
+// Health / promotion camp. Only assigned staff can mark camp attendance, only inside its geofence.
+model Camp {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  branchId       String?       @map("branch_id") @db.Uuid // organising location (optional)
+  name           String        @db.VarChar(255)
+  description    String?       @db.Text
+  campDate       DateTime      @map("camp_date") @db.Date
+  startTime      String        @map("start_time") @db.VarChar(5)
+  endTime        String        @map("end_time") @db.VarChar(5)
+  locationName   String        @map("location_name") @db.VarChar(255)
+  address        String?       @db.Text
+  latitude       Decimal       @db.Decimal(10, 7)
+  longitude      Decimal       @db.Decimal(10, 7)
+  radiusMetres   Int           @default(200) @map("radius_metres")
+  geofenceShape  GeofenceShape @default(CIRCLE) @map("geofence_shape")
+  boundary       Json?
+  boundaryLabel  String?       @map("boundary_label") @db.VarChar(255)
+  isCancelled    Boolean       @default(false) @map("is_cancelled")
+  createdById    String        @map("created_by") @db.Uuid
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization     @relation(fields: [organizationId], references: [id])
+  branch       Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  createdBy    User             @relation("CampCreatedBy", fields: [createdById], references: [id])
+  assignments  CampAssignment[]
+
+  @@index([organizationId, campDate])
+  @@map("camps")
+}
+
+model CampAssignment {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  campId                 String    @map("camp_id") @db.Uuid
+  employeeId             String    @map("employee_id") @db.Uuid
+  checkInAt              DateTime? @map("check_in_at") @db.Timestamptz
+  checkInLat             Decimal?  @map("check_in_lat") @db.Decimal(10, 7)
+  checkInLng             Decimal?  @map("check_in_lng") @db.Decimal(10, 7)
+  checkInAccuracyMetres  Decimal?  @map("check_in_accuracy_metres") @db.Decimal(8, 2)
+  checkInDistanceMetres  Decimal?  @map("check_in_distance_metres") @db.Decimal(10, 2)
+  checkInFaceScore       Float?    @map("check_in_face_score")
+  checkInSelfie          String?   @map("check_in_selfie") @db.Text
+  checkInIsMockLocation  Boolean?  @map("check_in_is_mock_location")
+  checkOutAt             DateTime? @map("check_out_at") @db.Timestamptz
+  checkOutLat            Decimal?  @map("check_out_lat") @db.Decimal(10, 7)
+  checkOutLng            Decimal?  @map("check_out_lng") @db.Decimal(10, 7)
+  checkOutDistanceMetres Decimal?  @map("check_out_distance_metres") @db.Decimal(10, 2)
+  checkOutFaceScore      Float?    @map("check_out_face_score")
+  report                 String?   @db.Text
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  camp     Camp     @relation(fields: [campId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([campId, employeeId])
+  @@index([employeeId])
+  @@map("camp_assignments")
+}
+
+// Customer master for sales executives (pharmacies, clinics, doctors... in a DC territory)
+model Customer {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  branchId       String?  @map("branch_id") @db.Uuid // distribution centre
+  name           String   @db.VarChar(255)
+  customerType   String?  @map("customer_type") @db.VarChar(60)
+  contactPerson  String?  @map("contact_person") @db.VarChar(255)
+  mobile         String?  @db.VarChar(15)
+  address        String?  @db.Text
+  latitude       Decimal? @db.Decimal(10, 7)
+  longitude      Decimal? @db.Decimal(10, 7)
+  notes          String?  @db.Text
+  isActive       Boolean  @default(true) @map("is_active")
+  addedById      String   @map("added_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  addedBy      User         @relation("CustomerAddedBy", fields: [addedById], references: [id])
+
+  @@index([organizationId, branchId])
+  @@map("customers")
 }

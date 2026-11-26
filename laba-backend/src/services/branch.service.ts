@@ -4,6 +4,42 @@ import { isCoordinateWithinIndia } from '../utils/haversine';
 import { CreateBranchInput, UpdateBranchInput, ListBranchesQuery } from '../schemas/branch.schema';
 import { Prisma } from '@prisma/client';
 
+/** Geofence / territory columns from create or update input. Shape CIRCLE clears a stored boundary. */
+type FenceData = Pick<
+  Prisma.BranchUncheckedCreateInput,
+  'locationType' | 'geofenceShape' | 'boundary' | 'boundaryLabel' | 'territory' | 'territoryLabel'
+>;
+const asJson = (g: unknown) => g as Prisma.InputJsonValue;
+
+function fenceData(input: Partial<CreateBranchInput>): FenceData {
+  const data: FenceData = {};
+  if (input.locationType) data.locationType = input.locationType;
+  if (input.geofenceShape === 'POLYGON') {
+    data.geofenceShape = 'POLYGON';
+    data.boundary = asJson(input.boundary);
+    data.boundaryLabel = input.boundaryLabel || null;
+  } else if (input.geofenceShape === 'CIRCLE') {
+    data.geofenceShape = 'CIRCLE';
+    data.boundary = Prisma.DbNull;
+    data.boundaryLabel = null;
+  }
+  if (input.territory !== undefined) {
+    data.territory = input.territory ? asJson(input.territory) : Prisma.DbNull;
+    data.territoryLabel = input.territory ? input.territoryLabel || null : null;
+  }
+  return data;
+}
+
+/** Lightweight list row: boundaries are only flagged (the full GeoJSON is fetched per branch). */
+const fenceSummary = (b: { locationType: string; geofenceShape: string; boundaryLabel: string | null; territory: unknown; territoryLabel: string | null; boundary: unknown }) => ({
+  locationType: b.locationType,
+  geofenceShape: b.geofenceShape,
+  boundaryLabel: b.boundaryLabel,
+  hasBoundary: !!b.boundary,
+  territoryLabel: b.territoryLabel,
+  hasTerritory: !!b.territory,
+});
+
 export class BranchService {
   /**
    * Registers a new pharmacy branch with GPS anchor point and geofence radius.
@@ -52,6 +88,7 @@ export class BranchService {
         latitude: new Prisma.Decimal(input.latitude),
         longitude: new Prisma.Decimal(input.longitude),
         geofenceRadiusMetres: input.geofenceRadiusMetres,
+        ...fenceData(input),
         managerEmployeeId: input.managerEmployeeId || null,
         createdById: creatorUserId,
       },
@@ -91,6 +128,7 @@ export class BranchService {
     const where: Prisma.BranchWhereInput = {
       organizationId,
       ...(query.isActive !== undefined && { isActive: query.isActive }),
+      ...(query.locationType && { locationType: query.locationType }),
       ...(query.search && {
         OR: [
           { name: { contains: query.search, mode: 'insensitive' } },
@@ -134,6 +172,7 @@ export class BranchService {
       latitude: b.latitude.toNumber(),
       longitude: b.longitude.toNumber(),
       geofenceRadiusMetres: b.geofenceRadiusMetres,
+      ...fenceSummary(b),
       isActive: b.isActive,
       manager: b.manager,
       activeEmployeeCount: b._count.assignments,
@@ -224,6 +263,7 @@ export class BranchService {
         ...(input.geofenceRadiusMetres !== undefined && { geofenceRadiusMetres: input.geofenceRadiusMetres }),
         ...(input.managerEmployeeId !== undefined && { managerEmployeeId: input.managerEmployeeId }),
         ...(input.isActive !== undefined && { isActive: input.isActive }),
+        ...fenceData(input),
       },
     });
 
@@ -231,7 +271,9 @@ export class BranchService {
     const coordsChanged =
       (input.latitude !== undefined && input.latitude !== existing.latitude.toNumber()) ||
       (input.longitude !== undefined && input.longitude !== existing.longitude.toNumber()) ||
-      (input.geofenceRadiusMetres !== undefined && input.geofenceRadiusMetres !== existing.geofenceRadiusMetres);
+      (input.geofenceRadiusMetres !== undefined && input.geofenceRadiusMetres !== existing.geofenceRadiusMetres) ||
+      input.geofenceShape !== undefined ||
+      input.territory !== undefined;
 
     if (coordsChanged) {
       await prisma.auditLog.create({
@@ -246,11 +288,17 @@ export class BranchService {
             latitude: existing.latitude.toNumber(),
             longitude: existing.longitude.toNumber(),
             geofenceRadiusMetres: existing.geofenceRadiusMetres,
+            geofenceShape: existing.geofenceShape,
+            boundaryLabel: existing.boundaryLabel,
+            territoryLabel: existing.territoryLabel,
           },
           afterState: {
             latitude: updated.latitude.toNumber(),
             longitude: updated.longitude.toNumber(),
             geofenceRadiusMetres: updated.geofenceRadiusMetres,
+            geofenceShape: updated.geofenceShape,
+            boundaryLabel: updated.boundaryLabel,
+            territoryLabel: updated.territoryLabel,
           },
         },
       });

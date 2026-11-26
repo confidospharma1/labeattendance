@@ -61,3 +61,55 @@ export function istDateTimeFromWorkDate(workDate: Date, timeStr: string): Date {
   const [hh, mm] = timeStr.split(':');
   return fromZonedTime(`${y}-${m}-${d}T${hh.padStart(2, '0')}:${(mm || '00').padStart(2, '0')}:00`, TIMEZONE);
 }
+
+// ─── Shift windows ──────────────────────────────────────────────────────────
+
+export interface ShiftLike {
+  startTime: string;
+  endTime: string;
+  checkInBeforeMinutes: number;
+  lateGraceMinutes: number;
+  checkInAfterMinutes: number;
+  checkOutBeforeMinutes: number;
+  checkOutAfterMinutes: number;
+}
+
+const MIN = 60_000;
+const DAY = 86_400_000;
+
+/** Absolute instants of one shift occurrence that starts on `workDate` (IST). Overnight shifts end the next day. */
+export function shiftInstants(workDate: Date, s: ShiftLike) {
+  const start = istDateTimeFromWorkDate(workDate, s.startTime);
+  let end = istDateTimeFromWorkDate(workDate, s.endTime);
+  if (end.getTime() <= start.getTime()) end = new Date(end.getTime() + DAY);
+  return {
+    start,
+    end,
+    overnight: timeStringToMinutes(s.endTime) <= timeStringToMinutes(s.startTime),
+    checkInOpen: new Date(start.getTime() - s.checkInBeforeMinutes * MIN),
+    lateAfter: new Date(start.getTime() + s.lateGraceMinutes * MIN),
+    checkInClose: new Date(start.getTime() + s.checkInAfterMinutes * MIN),
+    checkOutOpen: new Date(end.getTime() - s.checkOutBeforeMinutes * MIN),
+    checkOutClose: new Date(end.getTime() + s.checkOutAfterMinutes * MIN),
+  };
+}
+
+/** Candidate work dates around `now` (yesterday, today, tomorrow in IST). */
+export function nearbyWorkDates(now: Date = new Date()): Date[] {
+  const today = getISTWorkDate(now);
+  return [new Date(today.getTime() - DAY), today, new Date(today.getTime() + DAY)];
+}
+
+/** The shift occurrence whose check-in window contains `now`, if any. */
+export function shiftCheckInOccurrence(s: ShiftLike, now: Date = new Date()) {
+  for (const workDate of nearbyWorkDates(now)) {
+    const t = shiftInstants(workDate, s);
+    if (now >= t.checkInOpen && now <= t.checkInClose) return { workDate, ...t };
+  }
+  return null;
+}
+
+/** Formats an instant as HH:MM IST. */
+export function istHHMM(d: Date): string {
+  return d.toLocaleTimeString('en-GB', { timeZone: TIMEZONE, hour: '2-digit', minute: '2-digit', hour12: false });
+}

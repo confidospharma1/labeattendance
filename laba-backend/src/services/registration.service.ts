@@ -3,6 +3,7 @@ import { hashPassword } from '../utils/auth';
 import { generateNextEmployeeCode } from '../utils/idGenerator';
 import { AppError } from '../utils/AppError';
 import { RegisterInput, ApproveInput } from '../schemas/registration.schema';
+import { attendanceModeFor, modeNeedsLocation, roleForCategory } from '../utils/staff';
 
 export class RegistrationService {
   /** The single company organisation that self-registrations join. */
@@ -17,7 +18,7 @@ export class RegistrationService {
     const org = await this.getOrganization();
     return prisma.branch.findMany({
       where: { organizationId: org.id, isActive: true },
-      select: { id: true, name: true, district: true, branchCode: true },
+      select: { id: true, name: true, district: true, branchCode: true, locationType: true },
       orderBy: { name: 'asc' },
     });
   }
@@ -30,7 +31,7 @@ export class RegistrationService {
       throw new AppError('An account with this email already exists.', 409, 'EMAIL_EXISTS');
     }
 
-    if (input.employeeType === 'OFFICE_STAFF') {
+    if (input.branchId) {
       const branch = await prisma.branch.findFirst({
         where: { id: input.branchId, organizationId: org.id, isActive: true },
       });
@@ -43,7 +44,7 @@ export class RegistrationService {
       const user = await tx.user.create({
         data: { organizationId: org.id, email: input.email, passwordHash, role: input.employeeType },
       });
-      const employeeCode = await generateNextEmployeeCode(tx, input.employeeType);
+      const employeeCode = await generateNextEmployeeCode(tx, input.employeeType, input.staffCategory);
       const emp = await tx.employee.create({
         data: {
           userId: user.id,
@@ -52,12 +53,15 @@ export class RegistrationService {
           fullName: input.fullName,
           mobile: input.mobile,
           employeeType: input.employeeType,
+          staffCategory: input.staffCategory ?? null,
+          designation: input.designation || null,
+          dateOfJoining: input.dateOfJoining ? new Date(input.dateOfJoining + 'T00:00:00.000Z') : null,
           status: 'PENDING_APPROVAL',
           selfRegistered: true,
           createdById: user.id,
         },
       });
-      if (input.employeeType === 'OFFICE_STAFF' && input.branchId) {
+      if (input.branchId) {
         await tx.branchAssignment.create({
           data: {
             employeeId: emp.id,
@@ -107,16 +111,22 @@ export class RegistrationService {
     });
     if (!employee) throw new AppError('Pending registration not found.', 404, 'NOT_FOUND');
 
-    const employeeType = input.employeeType ?? employee.employeeType;
+    const category = input.staffCategory ?? employee.staffCategory ?? null;
+    const employeeType = category ? roleForCategory(category) : (input.employeeType ?? employee.employeeType);
     if (employeeType !== 'OFFICE_STAFF' && employeeType !== 'FIELD_STAFF') {
       throw new AppError('Only office or field staff can be approved here.', 400, 'INVALID_TYPE');
     }
+    const needsLocation = modeNeedsLocation(attendanceModeFor(employeeType, category));
+    if (input.shiftId) {
+      const shift = await prisma.shift.findFirst({ where: { id: input.shiftId, organizationId } });
+      if (!shift) throw new AppError('Shift not found.', 404, 'SHIFT_NOT_FOUND');
+    }
 
     return prisma.$transaction(async (tx) => {
-      if (employeeType === 'OFFICE_STAFF') {
-        const current = await tx.branchAssignment.findFirst({ where: { employeeId, isCurrent: true } });
+      const current = await tx.branchAssignment.findFirst({ where: { employeeId, isCurrent: true } });
+      if (needsLocation || input.branchId || current) {
         const branchId = input.branchId ?? current?.branchId;
-        if (!branchId) throw new AppError('Office staff need a branch. Select one to approve.', 400, 'BRANCH_REQUIRED');
+        if (!branchId) throw new AppError('This staff category needs a work location. Select one to approve.', 400, 'BRANCH_REQUIRED');
         const branch = await tx.branch.findFirst({ where: { id: branchId, organizationId, isActive: true } });
         if (!branch) throw new AppError('Branch not found.', 404, 'BRANCH_NOT_FOUND');
         if (!current || current.branchId !== branchId) {
@@ -125,14 +135,20 @@ export class RegistrationService {
             data: { employeeId, branchId, effectiveFrom: new Date(), isCurrent: true, assignedById: adminUserId },
           });
         }
-      } else {
-        // Field staff have no fixed branch
-        await tx.branchAssignment.updateMany({ where: { employeeId, isCurrent: true }, data: { isCurrent: false, effectiveTo: new Date() } });
       }
 
       const updated = await tx.employee.update({
         where: { id: employeeId },
-        data: { status: 'ACTIVE', employeeType, approvedById: adminUserId, approvedAt: new Date(), rejectionReason: null },
+        data: {
+          status: 'ACTIVE',
+          employeeType,
+          staffCategory: category,
+          ...(input.shiftId && { shiftId: input.shiftId }),
+          ...(input.designation && { designation: input.designation }),
+          approvedById: adminUserId,
+          approvedAt: new Date(),
+          rejectionReason: null,
+        },
       });
       await tx.user.update({ where: { id: employee.userId }, data: { role: employeeType } });
       await tx.auditLog.create({
@@ -143,7 +159,7 @@ export class RegistrationService {
           action: 'EMPLOYEE_APPROVED',
           entityType: 'employees',
           entityId: employeeId,
-          afterState: { employeeType, branchId: input.branchId ?? null },
+          afterState: { employeeType, staffCategory: category, branchId: input.branchId ?? null },
         },
       });
       return { id: updated.id, status: updated.status, employeeType: updated.employeeType };

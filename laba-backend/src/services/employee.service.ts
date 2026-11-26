@@ -3,27 +3,66 @@ import { hashPassword } from '../utils/auth';
 import { generateNextEmployeeCode } from '../utils/idGenerator';
 import { AppError } from '../utils/AppError';
 import { CreateEmployeeInput, UpdateEmployeeInput, UpdateEmployeeStatusInput, ListEmployeesQuery } from '../schemas/employee.schema';
-import { Prisma } from '@prisma/client';
+import { Prisma, StaffCategory } from '@prisma/client';
+import { attendanceModeFor, modeNeedsLocation, roleForCategory, CATEGORY_LABEL } from '../utils/staff';
+
+const toDate = (s?: string | null) => (s ? new Date(`${s}T00:00:00.000Z`) : null);
+const ymd = (d?: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+
+const branchSelect = { id: true, name: true, branchCode: true, locationType: true, district: true } as const;
 
 export class EmployeeService {
+  /** Login role for the employee: from the staff category, or the explicit type for admins / legacy staff. */
+  private resolveType(employeeType: string | undefined, category: StaffCategory | null | undefined) {
+    if (employeeType === 'ADMIN' || employeeType === 'SUPER_ADMIN') return employeeType;
+    if (category) return roleForCategory(category);
+    return (employeeType as 'OFFICE_STAFF' | 'FIELD_STAFF') ?? 'OFFICE_STAFF';
+  }
+
+  private async assertShift(organizationId: string, shiftId?: string | null) {
+    if (!shiftId) return;
+    const shift = await prisma.shift.findFirst({ where: { id: shiftId, organizationId } });
+    if (!shift) throw new AppError('Selected shift not found.', 404, 'SHIFT_NOT_FOUND');
+  }
+
+  private async assertCodeFree(employeeCode: string, exceptId?: string) {
+    const existing = await prisma.employee.findUnique({ where: { employeeCode }, select: { id: true } });
+    if (existing && existing.id !== exceptId) {
+      throw new AppError(`Employee code ${employeeCode} is already in use.`, 409, 'DUPLICATE_EMPLOYEE_CODE');
+    }
+  }
+
   /**
    * Creates an employee, corresponding user credentials, and active branch assignment in one atomic transaction.
    */
   public async createEmployee(creatorUserId: string, organizationId: string, input: CreateEmployeeInput) {
-    // Office Staff mandate active branch assignment (Correction R-2)
-    if (input.employeeType === 'OFFICE_STAFF' && !input.branchId) {
-      throw new AppError('Office Staff requires a permanent branch assignment.', 400, 'BRANCH_REQUIRED');
+    const category = input.employeeType === 'ADMIN' ? null : (input.staffCategory ?? null);
+    const employeeType = this.resolveType(input.employeeType, category);
+    const branchId = input.branchId || null;
+    const shiftId = input.shiftId || null;
+    const mode = attendanceModeFor(employeeType, category);
+
+    // Office-type staff and sales executives need a work location (office / DC / pharmacy / lab)
+    if (employeeType !== 'ADMIN' && modeNeedsLocation(mode) && !branchId) {
+      throw new AppError(
+        mode === 'TERRITORY'
+          ? 'Sales executives must be allotted to a distribution centre.'
+          : 'This staff category requires a work location (office, DC, pharmacy or lab).',
+        400,
+        'BRANCH_REQUIRED'
+      );
     }
 
-    // Verify branch exists and belongs to organization
-    if (input.branchId) {
+    if (branchId) {
       const branch = await prisma.branch.findFirst({
-        where: { id: input.branchId, organizationId, isActive: true },
+        where: { id: branchId, organizationId, isActive: true },
       });
       if (!branch) {
-        throw new AppError('Specified branch not found or inactive.', 404, 'BRANCH_NOT_FOUND');
+        throw new AppError('Specified work location not found or inactive.', 404, 'BRANCH_NOT_FOUND');
       }
     }
+    await this.assertShift(organizationId, shiftId);
+    if (input.employeeCode) await this.assertCodeFree(input.employeeCode);
 
     const passwordHash = await hashPassword(input.password);
 
@@ -34,12 +73,12 @@ export class EmployeeService {
           organizationId,
           email: input.email,
           passwordHash,
-          role: input.employeeType,
+          role: employeeType,
         },
       });
 
-      // 2. Generate sequential Employee code
-      const employeeCode = await generateNextEmployeeCode(tx, input.employeeType);
+      // 2. Employee code: admin-supplied (HR code) or generated per category
+      const employeeCode = input.employeeCode || (await generateNextEmployeeCode(tx, employeeType, category));
 
       // 3. Create Employee profile record
       const employee = await tx.employee.create({
@@ -50,7 +89,11 @@ export class EmployeeService {
           contactId: input.contactId || null,
           fullName: input.fullName,
           mobile: input.mobile,
-          employeeType: input.employeeType,
+          employeeType,
+          staffCategory: category,
+          designation: input.designation || null,
+          dateOfJoining: toDate(input.dateOfJoining),
+          shiftId,
           status: 'ACTIVE',
           profileNotes: input.profileNotes || null,
           createdById: creatorUserId,
@@ -58,11 +101,11 @@ export class EmployeeService {
       });
 
       // 4. Create active branch assignment if assigned
-      if (input.branchId) {
+      if (branchId) {
         await tx.branchAssignment.create({
           data: {
             employeeId: employee.id,
-            branchId: input.branchId,
+            branchId,
             effectiveFrom: new Date(),
             isCurrent: true,
             assignedById: creatorUserId,
@@ -83,7 +126,9 @@ export class EmployeeService {
             employeeCode,
             fullName: employee.fullName,
             employeeType: employee.employeeType,
-            branchId: input.branchId || null,
+            staffCategory: category,
+            designation: employee.designation,
+            branchId,
           },
         },
       });
@@ -95,19 +140,21 @@ export class EmployeeService {
         email: user.email,
         mobile: employee.mobile,
         employeeType: employee.employeeType,
+        staffCategory: employee.staffCategory,
         status: employee.status,
       };
     });
   }
 
   /**
-   * Retrieves paginated list of employees with optional branch/status/search filters.
+   * Retrieves paginated list of employees with optional branch/status/category/search filters.
    */
   public async listEmployees(organizationId: string, query: ListEmployeesQuery) {
     const where: Prisma.EmployeeWhereInput = {
       organizationId,
       deletedAt: null,
       ...(query.type && { employeeType: query.type }),
+      ...(query.category && { staffCategory: query.category }),
       ...(query.status && { status: query.status }),
       ...(query.branchId && {
         branchAssignments: {
@@ -121,6 +168,7 @@ export class EmployeeService {
         OR: [
           { fullName: { contains: query.search, mode: 'insensitive' } },
           { employeeCode: { contains: query.search, mode: 'insensitive' } },
+          { designation: { contains: query.search, mode: 'insensitive' } },
           { mobile: { contains: query.search } },
         ],
       }),
@@ -137,9 +185,10 @@ export class EmployeeService {
         orderBy: { createdAt: 'desc' },
         include: {
           user: { select: { email: true, lastLoginAt: true } },
+          shift: { select: { id: true, name: true, startTime: true, endTime: true } },
           branchAssignments: {
             where: { isCurrent: true },
-            include: { branch: { select: { id: true, name: true, branchCode: true } } },
+            include: { branch: { select: branchSelect } },
           },
         },
       }),
@@ -152,6 +201,11 @@ export class EmployeeService {
       email: emp.user.email,
       mobile: emp.mobile,
       employeeType: emp.employeeType,
+      staffCategory: emp.staffCategory,
+      categoryLabel: emp.staffCategory ? CATEGORY_LABEL[emp.staffCategory] : null,
+      designation: emp.designation,
+      dateOfJoining: ymd(emp.dateOfJoining),
+      shift: emp.shift,
       status: emp.status,
       assignedBranch: emp.branchAssignments[0]?.branch || null,
       lastLoginAt: emp.user.lastLoginAt,
@@ -177,6 +231,7 @@ export class EmployeeService {
       where: { id: employeeId, organizationId, deletedAt: null },
       include: {
         user: { select: { id: true, email: true, lastLoginAt: true } },
+        shift: true,
         branchAssignments: {
           orderBy: { createdAt: 'desc' },
           include: { branch: true },
@@ -198,6 +253,10 @@ export class EmployeeService {
       email: employee.user.email,
       mobile: employee.mobile,
       employeeType: employee.employeeType,
+      staffCategory: employee.staffCategory,
+      designation: employee.designation,
+      dateOfJoining: ymd(employee.dateOfJoining),
+      shift: employee.shift,
       status: employee.status,
       profileNotes: employee.profileNotes,
       currentBranch,
@@ -228,6 +287,27 @@ export class EmployeeService {
 
     if (!existing) {
       throw new AppError('Employee not found.', 404, 'NOT_FOUND');
+    }
+
+    // Category drives the login role; switching to ADMIN clears the category.
+    const category =
+      input.employeeType === 'ADMIN' || input.employeeType === 'SUPER_ADMIN'
+        ? null
+        : input.staffCategory !== undefined
+          ? input.staffCategory
+          : existing.staffCategory;
+    const nextType =
+      input.staffCategory !== undefined || input.employeeType !== undefined
+        ? this.resolveType(input.employeeType ?? existing.employeeType, category)
+        : existing.employeeType;
+    const shiftId = input.shiftId === '' ? null : input.shiftId;
+    await this.assertShift(organizationId, shiftId);
+    if (input.employeeCode && input.employeeCode !== existing.employeeCode) {
+      await this.assertCodeFree(input.employeeCode, employeeId);
+    }
+    if (input.branchId) {
+      const branch = await prisma.branch.findFirst({ where: { id: input.branchId, organizationId, isActive: true } });
+      if (!branch) throw new AppError('Specified work location not found or inactive.', 404, 'BRANCH_NOT_FOUND');
     }
 
     return prisma.$transaction(async (tx) => {
@@ -262,14 +342,12 @@ export class EmployeeService {
       }
 
       // If email or role is updated, update the user account
-      if (input.email || input.employeeType) {
+      if (input.email || nextType !== existing.employeeType) {
         await tx.user.update({
           where: { id: existing.userId },
           data: {
             ...(input.email && { email: input.email }),
-            ...(input.employeeType && {
-              role: input.employeeType === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : input.employeeType === 'ADMIN' ? 'ADMIN' : input.employeeType === 'FIELD_STAFF' ? 'FIELD_STAFF' : 'OFFICE_STAFF',
-            }),
+            ...(nextType !== existing.employeeType && { role: nextType }),
           },
         });
       }
@@ -279,7 +357,12 @@ export class EmployeeService {
         data: {
           ...(input.fullName && { fullName: input.fullName }),
           ...(input.mobile && { mobile: input.mobile }),
-          ...(input.employeeType && { employeeType: input.employeeType as any }),
+          ...(nextType !== existing.employeeType && { employeeType: nextType }),
+          ...((input.staffCategory !== undefined || nextType !== existing.employeeType) && { staffCategory: category }),
+          ...(input.designation !== undefined && { designation: input.designation || null }),
+          ...(input.dateOfJoining !== undefined && { dateOfJoining: toDate(input.dateOfJoining) }),
+          ...(input.employeeCode && { employeeCode: input.employeeCode }),
+          ...(shiftId !== undefined && { shiftId }),
           ...(input.status && { status: input.status }),
           ...(input.contactId !== undefined && { contactId: input.contactId }),
           ...(input.profileNotes !== undefined && { profileNotes: input.profileNotes }),
@@ -294,14 +377,29 @@ export class EmployeeService {
           action: 'EMPLOYEE_UPDATED',
           entityType: 'employees',
           entityId: employeeId,
-          beforeState: { fullName: existing.fullName, mobile: existing.mobile, status: existing.status },
-          afterState: { fullName: updated.fullName, mobile: updated.mobile, status: updated.status },
+          beforeState: {
+            fullName: existing.fullName,
+            mobile: existing.mobile,
+            status: existing.status,
+            staffCategory: existing.staffCategory,
+            designation: existing.designation,
+            employeeCode: existing.employeeCode,
+          },
+          afterState: {
+            fullName: updated.fullName,
+            mobile: updated.mobile,
+            status: updated.status,
+            staffCategory: updated.staffCategory,
+            designation: updated.designation,
+            employeeCode: updated.employeeCode,
+          },
         },
       });
 
       return updated;
     });
   }
+
 
   /**
    * Permanently deletes employee and associated records from the entire database.
@@ -355,7 +453,8 @@ export class EmployeeService {
         where: { id: employeeId },
       });
 
-      // 7. Delete linked user account
+      // 7. Keep customers this person added (reassign to the admin), then delete the linked user account
+      await tx.customer.updateMany({ where: { addedById: existing.userId }, data: { addedById: deleterUserId } });
       await tx.user.delete({
         where: { id: existing.userId },
       });

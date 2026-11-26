@@ -3,6 +3,7 @@ import { prisma } from '../config/database';
 import { getISTWorkDate } from '../utils/timeWindows';
 import { EmployeeStatus, AttendanceStatus } from '@prisma/client';
 import { format } from 'date-fns';
+import { attendanceService } from './attendance.service';
 
 export class ExcelService {
   async generateDailyAttendanceWorkbook(organizationId: string, dateStr?: string): Promise<ExcelJS.Workbook> {
@@ -81,6 +82,45 @@ export class ExcelService {
       { metric: 'Report Generated At (UTC)', value: new Date().toISOString() },
     ]);
     wsSummary.getRow(1).eachCell((cell) => Object.assign(cell, headerStyle));
+
+    // ── SHEET: ALL STAFF BY CATEGORY (same data as the admin dashboard board) ──
+    const board = await attendanceService.getAttendanceBoard(organizationId, dateFormatted);
+    const istTime = (d?: Date | string | null) =>
+      d ? new Date(d).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) : '';
+    const wsAll = workbook.addWorksheet('All Staff by Category');
+    wsAll.columns = [
+      { header: 'Category', key: 'category', width: 30 },
+      { header: 'Employee Code', key: 'code', width: 16 },
+      { header: 'Employee Name', key: 'name', width: 24 },
+      { header: 'Designation', key: 'designation', width: 22 },
+      { header: 'Date of Joining', key: 'doj', width: 14 },
+      { header: 'Work Location', key: 'location', width: 26 },
+      { header: 'Shift', key: 'shift', width: 18 },
+      { header: 'Status', key: 'status', width: 14 },
+      { header: 'Late', key: 'late', width: 8 },
+      { header: 'Check-In (IST)', key: 'in', width: 14 },
+      { header: 'Check-Out (IST)', key: 'out', width: 14 },
+      { header: 'Marked At', key: 'markedAt', width: 28 },
+      { header: 'Work Report', key: 'report', width: 40 },
+    ];
+    for (const row of board.rows) {
+      wsAll.addRow({
+        category: board.byCategory[row.category]?.label ?? row.category,
+        code: row.employee.employeeCode,
+        name: row.employee.fullName,
+        designation: row.employee.designation ?? '',
+        doj: row.employee.dateOfJoining ?? '',
+        location: row.location?.name ?? '',
+        shift: row.shift ? `${row.shift.name} (${row.shift.startTime}-${row.shift.endTime})` : '',
+        status: row.status,
+        late: row.isLate ? 'Yes' : '',
+        in: istTime(row.record?.checkInAt),
+        out: istTime(row.record?.checkOutAt),
+        markedAt: row.record?.checkInLocationName ?? '',
+        report: row.record?.workReport ?? '',
+      });
+    }
+    wsAll.getRow(1).eachCell((cell) => Object.assign(cell, headerStyle));
 
     // ── SHEET 2: PRESENT STAFF ──────────────────────────────────────────────────
     const wsPresent = workbook.addWorksheet('Present Staff');

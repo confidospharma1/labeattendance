@@ -7,6 +7,9 @@ const kadapa: GeofenceTarget = {
   targetLat: 14.4673,
   targetLng: 78.8242,
   radiusMetres: 100,
+  shape: 'CIRCLE',
+  boundary: null,
+  boundaryLabel: null,
 };
 
 const gps = (latitude: number, longitude: number, accuracy = 10, isMockLocation?: boolean) => ({

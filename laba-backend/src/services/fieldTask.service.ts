@@ -2,7 +2,7 @@ import { Prisma, FieldTask, AttendanceStatus, LocationRefType } from '@prisma/cl
 import { prisma } from '../config/database';
 import { AppError } from '../utils/AppError';
 import { getISTWorkDate, istDateTimeFromWorkDate } from '../utils/timeWindows';
-import { geofenceService } from './geofence.service';
+import { geofenceService, targetFromRow } from './geofence.service';
 import { attendanceService } from './attendance.service';
 import { CreateTaskInput, UpdateTaskInput, VisitTaskInput, CompleteTaskInput } from '../schemas/fieldTask.schema';
 
@@ -11,6 +11,21 @@ const OVERDUE_LOOKBACK_DAYS = 7;
 
 const toDate = (s: string) => new Date(`${s}T00:00:00.000Z`);
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
+
+/** Geofence columns from create/update input (POLYGON keeps the boundary, CIRCLE clears it). */
+function fenceData(input: { geofenceShape?: 'CIRCLE' | 'POLYGON'; boundary?: unknown; boundaryLabel?: string | null }) {
+  if (input.geofenceShape === undefined) return {};
+  if (input.geofenceShape === 'POLYGON') {
+    return {
+      geofenceShape: 'POLYGON' as const,
+      boundary: input.boundary as Prisma.InputJsonValue,
+      boundaryLabel: input.boundaryLabel || null,
+    };
+  }
+  return { geofenceShape: 'CIRCLE' as const, boundary: Prisma.DbNull, boundaryLabel: null };
+}
+
+const taskTarget = (task: FieldTask) => targetFromRow(task, LocationRefType.FIELD_TASK, task.locationName, task.radiusMetres);
 
 /** Computed, time-dependent view of a task's state. */
 export function describeTask(task: FieldTask, now = new Date()) {
@@ -97,6 +112,7 @@ export class FieldTaskService {
         latitude: new Prisma.Decimal(input.latitude),
         longitude: new Prisma.Decimal(input.longitude),
         radiusMetres: input.radiusMetres,
+        ...fenceData(input),
         deadlineTime: input.deadlineTime,
         assignedById: adminUserId,
       },
@@ -114,6 +130,9 @@ export class FieldTaskService {
     if (task.status !== 'PENDING') {
       throw new AppError('Only tasks that have not been visited can be edited.', 400, 'TASK_LOCKED');
     }
+    if (input.geofenceShape === 'POLYGON' && !input.boundary) {
+      throw new AppError('Pick or draw a boundary for a boundary geofence.', 400, 'BOUNDARY_REQUIRED');
+    }
     const updated = await prisma.fieldTask.update({
       where: { id },
       data: {
@@ -125,11 +144,13 @@ export class FieldTaskService {
         ...(input.latitude !== undefined && { latitude: new Prisma.Decimal(input.latitude) }),
         ...(input.longitude !== undefined && { longitude: new Prisma.Decimal(input.longitude) }),
         ...(input.radiusMetres !== undefined && { radiusMetres: input.radiusMetres }),
+        ...fenceData(input),
         ...(input.deadlineTime !== undefined && { deadlineTime: input.deadlineTime }),
         ...(input.sequence !== undefined && { sequence: input.sequence }),
       },
     });
-    await this.audit(organizationId, adminUserId, 'ADMIN', 'FIELD_TASK_UPDATED', id, input);
+    const { boundary: _b, ...auditInput } = input;
+    await this.audit(organizationId, adminUserId, 'ADMIN', 'FIELD_TASK_UPDATED', id, auditInput);
     return describeTask(updated);
   }
 
@@ -184,6 +205,9 @@ export class FieldTaskService {
             latitude: t.latitude,
             longitude: t.longitude,
             radiusMetres: t.radiusMetres,
+            geofenceShape: t.geofenceShape,
+            boundary: t.boundary ?? Prisma.DbNull,
+            boundaryLabel: t.boundaryLabel,
             deadlineTime: t.deadlineTime,
             assignedById: adminUserId,
           },
@@ -306,15 +330,7 @@ export class FieldTaskService {
     }
     const info = this.assertCanWork(task, now);
     geofenceService.assertGpsQuality(input, policy.gpsAccuracyRejectMetres);
-    const target = {
-      type: LocationRefType.FIELD_TASK,
-      refId: task.id,
-      refName: task.locationName,
-      targetLat: Number(task.latitude),
-      targetLng: Number(task.longitude),
-      radiusMetres: task.radiusMetres,
-    };
-    const geo = geofenceService.assertInside(target, input);
+    const geo = geofenceService.assertInside(taskTarget(task), input);
     const faceScore = await attendanceService.verifyFace(employee.id, policy, input.face);
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -395,17 +411,8 @@ export class FieldTaskService {
     }
     const info = this.assertCanWork(task, now);
     geofenceService.assertGpsQuality(input, policy.gpsAccuracyRejectMetres);
-    const geo = geofenceService.assertInside(
-      {
-        type: LocationRefType.FIELD_TASK,
-        refId: task.id,
-        refName: task.locationName,
-        targetLat: Number(task.latitude),
-        targetLng: Number(task.longitude),
-        radiusMetres: task.radiusMetres,
-      },
-      input
-    );
+    const geo = geofenceService.assertInside(taskTarget(task), input);
+    const survey = input.survey ? Object.fromEntries(Object.entries(input.survey).filter(([, v]) => v !== '' && v !== undefined)) : null;
 
     const status = info.deadlinePassed ? 'LATE_COMPLETED' : 'COMPLETED';
 
@@ -415,6 +422,7 @@ export class FieldTaskService {
         data: {
           status,
           completionNote: input.completionNote.trim(),
+          ...(survey && Object.keys(survey).length > 0 && { surveyData: survey as Prisma.InputJsonValue }),
           completedAt: now,
           completeLat: input.latitude,
           completeLng: input.longitude,

@@ -16,6 +16,10 @@ import { attendanceRoutes } from './routes/attendance.routes';
 import { reportRoutes } from './routes/report.routes';
 import { auditRoutes } from './routes/audit.routes';
 import { policyRoutes } from './routes/policy.routes';
+import { shiftRoutes } from './routes/shift.routes';
+import { campRoutes } from './routes/camp.routes';
+import { customerRoutes } from './routes/customer.routes';
+import { geoRoutes } from './routes/geo.routes';
 
 export function createApp() {
   const app = express();
@@ -71,7 +75,7 @@ export function createApp() {
   );
 
   // Body parsers
-  app.use(express.json({ limit: '2mb' })); // face descriptors + selfie thumbnails
+  app.use(express.json({ limit: '4mb' })); // face descriptors, selfie thumbnails, boundary polygons
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
   app.use(cookieParser());
 
@@ -116,6 +120,10 @@ export function createApp() {
   apiRouter.use('/reports', reportRoutes);
   apiRouter.use('/audit-logs', auditRoutes);
   apiRouter.use('/policies', policyRoutes);
+  apiRouter.use('/shifts', shiftRoutes);
+  apiRouter.use('/camps', campRoutes);
+  apiRouter.use('/customers', customerRoutes);
+  apiRouter.use('/geo', geoRoutes);
 
   // Mount API Router
   app.use('/api/v1', apiRouter);

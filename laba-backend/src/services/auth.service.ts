@@ -141,6 +141,8 @@ export class AuthService {
               fullName: user.employee.fullName,
               mobile: user.employee.mobile,
               employeeType: user.employee.employeeType,
+              staffCategory: user.employee.staffCategory,
+              designation: user.employee.designation,
               status: user.employee.status,
               assignedBranch: activeBranch
                 ? {
@@ -217,10 +219,17 @@ export class AuthService {
             fullName: true,
             mobile: true,
             employeeType: true,
+            staffCategory: true,
+            designation: true,
+            dateOfJoining: true,
             status: true,
             branchAssignments: {
               where: { isCurrent: true },
-              include: { branch: true },
+              include: {
+                branch: {
+                  select: { id: true, name: true, branchCode: true, locationType: true, district: true, geofenceRadiusMetres: true },
+                },
+              },
             },
           },
         },
