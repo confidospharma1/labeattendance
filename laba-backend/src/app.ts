@@ -14,12 +14,13 @@ import { fieldTaskRoutes } from './routes/fieldTask.routes';
 import { faceRoutes } from './routes/face.routes';
 import { attendanceRoutes } from './routes/attendance.routes';
 import { reportRoutes } from './routes/report.routes';
-import { auditRoutes } from './routes/audit.routes';
 import { policyRoutes } from './routes/policy.routes';
 import { shiftRoutes } from './routes/shift.routes';
 import { campRoutes } from './routes/camp.routes';
 import { customerRoutes } from './routes/customer.routes';
 import { geoRoutes } from './routes/geo.routes';
+import { retentionRoutes } from './routes/retention.routes';
+import { retentionService } from './services/retention.service';
 
 export function createApp() {
   const app = express();
@@ -70,7 +71,7 @@ export function createApp() {
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-      exposedHeaders: ['Set-Cookie', 'Content-Disposition'],
+      exposedHeaders: ['Set-Cookie', 'Content-Disposition', 'X-Archive-Token', 'X-Archive-Through'],
     })
   );
 
@@ -118,12 +119,12 @@ export function createApp() {
   apiRouter.use('/face', faceRoutes);
   apiRouter.use('/attendance', attendanceRoutes);
   apiRouter.use('/reports', reportRoutes);
-  apiRouter.use('/audit-logs', auditRoutes);
   apiRouter.use('/policies', policyRoutes);
   apiRouter.use('/shifts', shiftRoutes);
   apiRouter.use('/camps', campRoutes);
   apiRouter.use('/customers', customerRoutes);
   apiRouter.use('/geo', geoRoutes);
+  apiRouter.use('/retention', retentionRoutes);
 
   // Mount API Router
   app.use('/api/v1', apiRouter);
@@ -152,5 +153,6 @@ if (require.main === module || process.env.NODE_ENV !== 'test') {
   app.listen(port, () => {
     logger.info(`🚀 J-Track API running on http://localhost:${port}`);
     logger.info(`🌍 Environment: ${env.NODE_ENV} | Frontend: ${env.FRONTEND_URL}`);
+    retentionService.startScheduler();
   });
 }

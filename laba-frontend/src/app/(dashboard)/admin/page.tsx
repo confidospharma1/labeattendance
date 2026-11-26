@@ -7,9 +7,6 @@ import { apiClient } from '@/lib/api';
 import {
   Users,
   Building2,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
   LogOut,
   Download,
   RefreshCw,
@@ -24,7 +21,7 @@ import {
   Shield,
   Edit2,
   Trash2,
-  BarChart3,
+  Database,
   Menu,
   Search,
   ExternalLink,
@@ -47,7 +44,9 @@ import { EditAttendanceModal } from '@/components/attendance/EditAttendanceModal
 import { ConfirmDeleteModal } from '@/components/common/ConfirmDeleteModal';
 import { PolicyModal } from '@/components/policy/PolicyModal';
 import { Logo } from '@/components/common/Logo';
-import { AnalyticsView } from '@/components/analytics/AnalyticsView';
+import { DashboardView, BoardFocus } from '@/components/analytics/DashboardView';
+import { DataRetentionPanel, RetentionBanner, RetentionStatus } from '@/components/admin/DataRetentionPanel';
+import { saveFile, filenameFrom } from '@/lib/download';
 import { AttendanceBoard } from '@/components/admin/AttendanceBoard';
 import { ShiftsPanel } from '@/components/admin/ShiftsPanel';
 import { CampsPanel } from '@/components/admin/CampsPanel';
@@ -86,16 +85,17 @@ export default function AdminDashboard() {
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<
-    'attendance' | 'employees' | 'branches' | 'corrections' | 'analytics' | 'audit' | 'policy' | 'approvals' | 'tasks' | 'late' | 'shifts' | 'camps' | 'customers'
+    'attendance' | 'employees' | 'branches' | 'corrections' | 'data' | 'policy' | 'approvals' | 'tasks' | 'late' | 'shifts' | 'camps' | 'customers'
   >('attendance');
   const [plannerEmployeeId, setPlannerEmployeeId] = useState<string | undefined>(undefined);
   const [boardRefresh, setBoardRefresh] = useState(0);
+  const [boardFocus, setBoardFocus] = useState<BoardFocus | null>(null);
+  const [retention, setRetention] = useState<RetentionStatus | null>(null);
 
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [branches, setBranches] = useState<any[]>([]);
   const [corrections, setCorrections] = useState<any[]>([]);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [policy, setPolicy] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
@@ -123,13 +123,13 @@ export default function AdminDashboard() {
   const fetchAdminData = useCallback(async () => {
     try {
       setLoading(true);
-      const [empRes, summaryRes, branchRes, corrRes, policyRes, auditRes] = await Promise.all([
+      const [empRes, summaryRes, branchRes, corrRes, policyRes, retentionRes] = await Promise.all([
         apiClient.get('/employees?limit=500'),
         apiClient.get('/attendance/dashboard'),
         apiClient.get('/branches?limit=500'),
         apiClient.get('/attendance/corrections'),
         apiClient.get('/policies/current').catch(() => ({ data: { data: null } })),
-        apiClient.get('/audit-logs?limit=50').catch(() => ({ data: { data: [] } })),
+        apiClient.get('/retention/status').catch(() => ({ data: { data: null } })),
       ]);
 
       setEmployees(empRes.data.data.items || []);
@@ -141,7 +141,7 @@ export default function AdminDashboard() {
       setBranches(branchList);
       setCorrections(corrRes.data.data || []);
       setPolicy(policyRes.data.data || null);
-      setAuditLogs(auditRes.data.data || []);
+      setRetention(retentionRes.data.data || null);
       setBoardRefresh((n) => n + 1);
     } catch (err) {
       console.error('Failed to load admin dashboard data', err);
@@ -173,15 +173,11 @@ export default function AdminDashboard() {
         responseType: 'blob',
       });
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `LABE_Attendance_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      const name = filenameFrom(response.headers['content-disposition'], `J-Track_Attendance_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      await saveFile(new Blob([response.data]), name);
     } catch (err) {
       console.error('Failed to export Excel report', err);
+      alert('Could not download the Excel report. Please try again.');
     } finally {
       setDownloadingExcel(false);
     }
@@ -235,7 +231,7 @@ export default function AdminDashboard() {
 
   const pendingCorrections = corrections.filter((c) => c.status === 'PENDING').length;
   const NAV: { id: typeof activeTab; label: string; icon: any; badge?: number; superOnly?: boolean }[] = [
-    { id: 'attendance', label: 'Attendance', icon: LayoutDashboard },
+    { id: 'attendance', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'tasks', label: 'Field routes', icon: Route },
     { id: 'camps', label: 'Camps', icon: Tent },
     { id: 'shifts', label: 'Shifts', icon: Timer },
@@ -245,16 +241,8 @@ export default function AdminDashboard() {
     { id: 'approvals', label: 'Approvals', icon: UserCheck, badge: (summary as any)?.pendingApprovals ?? 0 },
     { id: 'late', label: 'Late requests', icon: Hourglass, badge: (summary as any)?.pendingLateRequests ?? 0 },
     { id: 'corrections', label: 'Corrections', icon: FileCheck2, badge: pendingCorrections },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'policy', label: 'Policy', icon: Sliders },
-    { id: 'audit', label: 'Audit trail', icon: Shield, superOnly: true },
-  ];
-
-  const kpis = [
-    { label: 'Active staff', value: summary ? summary.totalActiveEmployees : employees.length, sub: `${branches.length} locations`, icon: Users, tone: 'bg-brand-50 text-brand-700' },
-    { label: 'Present today', value: summary?.presentCount ?? 0, sub: `${summary?.checkedOutCount ?? 0} checked out`, icon: CheckCircle2, tone: 'bg-emerald-50 text-emerald-700' },
-    { label: 'Still on duty', value: summary?.checkedInOnlyCount ?? 0, sub: `${(summary as any)?.lateCount ?? 0} late today`, icon: Clock, tone: 'bg-amber-50 text-amber-700' },
-    { label: 'Absent', value: summary?.absentCount ?? 0, sub: `${(summary as any)?.notYetCount ?? 0} not yet marked`, icon: AlertTriangle, tone: 'bg-red-50 text-red-700' },
+    { id: 'data', label: 'Data & storage', icon: Database, badge: retention?.alert ? 1 : 0 },
   ];
 
   return (
@@ -332,7 +320,7 @@ export default function AdminDashboard() {
       {/* Navigation */}
       <nav className="sticky top-[61px] z-20 bg-[#F4F6FB]/95 backdrop-blur border-b border-[#E2E8F0]">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 overflow-x-auto">
-          <div className="flex gap-1 py-2 min-w-max">
+          <div className="flex gap-1 py-2 min-w-max xl:min-w-0 xl:flex-wrap">
             {NAV.filter((n) => !n.superOnly || user?.role === 'SUPER_ADMIN').map(({ id, label, icon: Icon, badge }) => (
               <button
                 key={id}
@@ -360,34 +348,27 @@ export default function AdminDashboard() {
 
       {/* Main Admin Content */}
       <main className="max-w-7xl mx-auto p-3 sm:p-6 space-y-5 sm:space-y-6">
+        <RetentionBanner status={retention} onOpen={() => setActiveTab('data')} />
+
         {activeTab === 'attendance' && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-            {kpis.map(({ label, value, sub, icon: Icon, tone }) => (
-              <div key={label} className="bg-white border border-[#E2E8F0] rounded-2xl p-3 sm:p-4 flex items-start gap-3">
-                <span className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${tone}`}>
-                  <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                </span>
-                <div className="min-w-0">
-                  <div className="text-[11px] sm:text-xs text-[#64748B]">{label}</div>
-                  <div className="text-xl sm:text-2xl font-bold text-ink leading-tight">{value}</div>
-                  <div className="text-[10px] sm:text-[11px] text-[#94A3B8] truncate">{sub}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <DashboardView
+            summary={summary}
+            refreshKey={boardRefresh}
+            onFocus={(f) => setBoardFocus({ ...f, nonce: Date.now() })}
+          />
         )}
 
         {activeTab === 'tasks' && <TaskPlanner employees={employees} initialEmployeeId={plannerEmployeeId} />}
         {activeTab === 'approvals' && <ApprovalsPanel branches={branches} employees={employees} onChanged={fetchAdminData} />}
         {activeTab === 'late' && <LateRequestsPanel onChanged={fetchAdminData} />}
 
-        {/* Tab: Analytics Intelligence */}
-        {activeTab === 'analytics' && <AnalyticsView />}
+        {activeTab === 'data' && <DataRetentionPanel isSuperAdmin={user?.role === 'SUPER_ADMIN'} onChanged={setRetention} />}
 
         {/* Tab 1: All staff attendance (every employee, by category & location) */}
         {activeTab === 'attendance' && (
           <AttendanceBoard
             refreshKey={boardRefresh}
+            focus={boardFocus}
             onEditRecord={(rec) => setEditingAttendance(rec)}
             onDeleteRecord={(rec) =>
               setDeletingItem({
@@ -1094,108 +1075,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Tab 6: Audit Trail */}
-        {activeTab === 'audit' && (
-          <div className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden shadow-xs">
-            <div className="px-5 py-4 border-b border-[#E2E8F0] flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-sm text-ink">System Audit Log Trail</h3>
-                <p className="text-xs text-[#64748B]">Immutable record of authentication, geofence, and administration actions</p>
-              </div>
-              <span className="text-xs font-bold text-ink bg-slate-100 px-2.5 py-1 rounded-full">
-                {auditLogs.length} Events
-              </span>
-            </div>
-
-            {auditLogs.length === 0 ? (
-              <div className="px-5 py-12 text-center text-xs text-[#64748B]">
-                No audit logs recorded yet.
-              </div>
-            ) : (
-              <>
-                {/* Mobile Cards View (< 640px) */}
-                <div className="block sm:hidden divide-y divide-[#E2E8F0] p-3 space-y-3">
-                  {auditLogs.map((log) => (
-                    <div
-                      key={log.id}
-                      className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3.5 space-y-2 shadow-2xs text-xs"
-                    >
-                      <div className="flex items-center justify-between border-b border-[#E8ECF3] pb-2">
-                        <span className="font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded text-[11px] font-semibold">
-                          {log.action}
-                        </span>
-                        <span className="text-[10px] text-[#64748B]">
-                          {new Date(log.createdAt).toLocaleTimeString('en-IN', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            timeZone: 'Asia/Kolkata',
-                          })}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1 text-[#64748B] text-[11px]">
-                        <div>
-                          Actor: <strong className="text-ink">{log.actor?.email || 'System'}</strong> ({log.actorRole})
-                        </div>
-                        <div>
-                          Entity: <strong className="text-ink">{log.entityType}</strong>
-                        </div>
-                        <div>
-                          Time:{' '}
-                          <span className="text-ink">
-                            {new Date(log.createdAt).toLocaleDateString('en-IN', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                            })}
-                          </span>
-                        </div>
-                        {log.ipAddress && (
-                          <div className="font-mono text-[10px]">IP: {log.ipAddress}</div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Desktop Table View (>= 640px) */}
-                <div className="hidden sm:block overflow-x-auto">
-                  <table className="w-full text-left text-xs min-w-[700px]">
-                    <thead className="bg-[#F4F6FB] border-b border-[#E2E8F0] text-[#64748B] uppercase tracking-wider">
-                      <tr>
-                        <th className="px-5 py-3 font-semibold">Timestamp</th>
-                        <th className="px-5 py-3 font-semibold">Actor</th>
-                        <th className="px-5 py-3 font-semibold">Action</th>
-                        <th className="px-5 py-3 font-semibold">Entity</th>
-                        <th className="px-5 py-3 font-semibold">IP Address</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#E2E8F0]">
-                      {auditLogs.map((log) => (
-                        <tr key={log.id} className="hover:bg-[#F8FAFC]">
-                          <td className="px-5 py-3 text-[#64748B]">
-                            {new Date(log.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
-                          </td>
-                          <td className="px-5 py-3 font-medium text-ink">
-                            {log.actor?.email || 'System'}
-                            <span className="text-[10px] text-[#64748B] block">{log.actorRole}</span>
-                          </td>
-                          <td className="px-5 py-3">
-                            <span className="font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-[11px]">
-                              {log.action}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3 text-[#64748B]">{log.entityType}</td>
-                          <td className="px-5 py-3 text-[#64748B] font-mono">{log.ipAddress || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-          </div>
-        )}
 
         {/* Reusable Modals */}
         <AddBranchModal

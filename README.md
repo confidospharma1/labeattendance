@@ -13,9 +13,11 @@ J-Track is the attendance and field-tracking system (web + Android app) for head
   - *Field Staff:* Configurable daily and 7-day schedules with support for explicit unrestricted locations and weekly off protection.
 - **Configurable Attendance Windows:** Enforced server-side using Indian Standard Time (`Asia/Kolkata`).
 - **Mandatory Daily Work Reports:** Check-out is blocked until a validated summary of the day's tasks is submitted.
-- **Auditable Correction Lifecycle:** Controlled request-and-approval workflow with before/after state snapshots.
+- **Correction Workflow:** Staff request attendance corrections; admins approve or reject them with remarks.
+- **One Dashboard with Clickable Analytics:** Today's split, a daily trend (7/14/30/90 days), attendance by staff category and by location, and check-in times. Clicking any chart or card filters the staff list below it.
+- **Data Retention for the 1 GB Free Database:** Attendance history is kept for 30/60/90/120/180/365 days (default 90), then deleted automatically. Admins see a warning for the last 5 days before data is deleted and can download it as Excel; the archived days are deleted as soon as the file is saved (see *Data & storage* in the admin console).
 - **Multi-Sheet ExcelJS Reports:** Comprehensive server-side Excel workbooks generated with proper organizational scoping.
-- **Enterprise Design System:** Minimalist, high-performance interface built with a refined neutral palette (`#F7F6F2`, `#171717`, `#E5E5E5`).
+- **Responsive J-Track Design:** Indigo design system that works on phones, tablets and desktops, in the browser and in the Android app.
 
 ### Staff categories and how each marks attendance
 
@@ -113,3 +115,16 @@ npx cap open android                                                   # then Bu
 
 Render runs `npm run build`, which calls `scripts/db-sync.js` (only when `RENDER=true`) to apply **additive** schema changes with `prisma db push` before the new API starts. Destructive changes (dropping a table/column that has data) are refused: the build fails and Render keeps the previous version live, so apply those manually after a backup.
 
+
+### Resetting the database
+
+`scripts/reset-database.ts` erases every table and creates the J-Track organisation, a default policy and one super admin. The password is passed in the environment, never stored in the repo:
+
+```bash
+cd laba-backend
+CONFIRM_RESET=ERASE-ALL-DATA SUPERADMIN_EMAIL=superadmin@jtrack.in SUPERADMIN_PASSWORD='<strong password>' npx ts-node scripts/reset-database.ts
+```
+
+### Data retention
+
+The API deletes attendance records, field-route stops, camps and corrections older than the organisation's retention period (checked at start-up, every 3 hours, and whenever an admin opens the dashboard). `DB_STORAGE_LIMIT_MB` (default 1024) sets the storage limit used for the usage meter and the recommended period.

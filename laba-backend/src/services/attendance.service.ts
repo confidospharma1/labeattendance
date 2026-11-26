@@ -230,28 +230,6 @@ export class AttendanceService {
         },
       });
 
-      await tx.auditLog.create({
-        data: {
-          organizationId: employee.organizationId,
-          actorId: userId,
-          actorRole: employee.employeeType,
-          action: 'ATTENDANCE_CHECK_IN',
-          entityType: 'AttendanceRecord',
-          entityId: record.id,
-          ipAddress: ipAddress || null,
-          userAgent: userAgent || null,
-          metadata: {
-            mode,
-            shape: geoResult?.shape ?? null,
-            distanceMetres: geoResult?.distanceMetres ?? null,
-            allowedRadius: target?.radiusMetres ?? null,
-            location: loc.name,
-            shift: shift?.name ?? null,
-            isLate: win.isLate,
-            faceScore,
-          },
-        },
-      });
 
       return { record: this.stripSelfies(record), target: this.publicTarget(target), geoResult, faceScore, isLate: win.isLate, mode };
     });
@@ -315,24 +293,6 @@ export class AttendanceService {
         },
       });
 
-      await tx.auditLog.create({
-        data: {
-          organizationId: employee.organizationId,
-          actorId: userId,
-          actorRole: employee.employeeType,
-          action: 'ATTENDANCE_CHECK_OUT',
-          entityType: 'AttendanceRecord',
-          entityId: updated.id,
-          ipAddress: ipAddress || null,
-          userAgent: userAgent || null,
-          metadata: {
-            mode,
-            distanceMetres: geoResult?.distanceMetres ?? null,
-            workReportLength: input.workReport.trim().length,
-            faceScore,
-          },
-        },
-      });
 
       return { record: this.stripSelfies(updated), target: this.publicTarget(target), geoResult, faceScore, mode };
     });
@@ -585,18 +545,6 @@ export class AttendanceService {
         }
       }
 
-      await tx.auditLog.create({
-        data: {
-          organizationId: correction.organizationId,
-          actorId: adminUserId,
-          actorRole: 'ADMIN',
-          action: `CORRECTION_${input.status}`,
-          entityType: 'AttendanceCorrection',
-          entityId: correctionId,
-          afterState: JSON.parse(JSON.stringify(updatedCorrection)),
-          metadata: { adminReason: input.adminReason },
-        },
-      });
 
       return updatedCorrection;
     });
@@ -778,7 +726,7 @@ export class AttendanceService {
   }
 
   /**
-   * Admin direct update of an attendance record with full audit trail.
+   * Admin direct update of an attendance record.
    */
   async updateAttendanceRecord(
     adminUserId: string,
@@ -818,29 +766,6 @@ export class AttendanceService {
       include: { employee: true },
     });
 
-    await prisma.auditLog.create({
-      data: {
-        organizationId,
-        actorId: adminUserId,
-        actorRole: 'ADMIN',
-        action: 'ATTENDANCE_ADMIN_MODIFIED',
-        entityType: 'attendance_records',
-        entityId: recordId,
-        beforeState: {
-          status: existing.status,
-          checkInAt: existing.checkInAt,
-          checkOutAt: existing.checkOutAt,
-          workReport: existing.workReport,
-        },
-        afterState: {
-          status: updated.status,
-          checkInAt: updated.checkInAt,
-          checkOutAt: updated.checkOutAt,
-          workReport: updated.workReport,
-          notes: data.notes,
-        },
-      },
-    });
 
     return updated;
   }
@@ -873,24 +798,6 @@ export class AttendanceService {
         where: { id: recordId },
       });
 
-      // 3. Record audit log
-      await tx.auditLog.create({
-        data: {
-          organizationId,
-          actorId: adminUserId,
-          actorRole: 'ADMIN',
-          action: 'ATTENDANCE_RECORD_DELETED',
-          entityType: 'attendance_records',
-          entityId: recordId,
-          beforeState: {
-            employeeId: existing.employeeId,
-            employeeName: existing.employee.fullName,
-            workDate: existing.workDate,
-            status: existing.status,
-          },
-          afterState: { deleted: true },
-        },
-      });
 
       return {
         success: true,
@@ -900,150 +807,192 @@ export class AttendanceService {
   }
 
   /**
-   * Comprehensive Analytics Aggregation for Admin & Super Admin.
+   * Dashboard analytics for a date range ending today (IST): daily trend, staff categories,
+   * locations and check-in times. Presence counts only real check-ins (absent rows excluded).
    */
-  async getAnalytics(organizationId: string, days = 7) {
-    const totalActiveEmployees = await prisma.employee.count({
-      where: { organizationId, status: EmployeeStatus.ACTIVE, employeeType: { in: [...STAFF_TYPES] }, deletedAt: null },
-    });
+  async getAnalytics(organizationId: string, days = 14) {
+    const span = Math.min(90, Math.max(1, Math.round(days) || 14));
+    const DAY_MS = 86_400_000;
+    const todayIST = getISTWorkDate(new Date());
+    const startDate = new Date(todayIST.getTime() - (span - 1) * DAY_MS);
+    const key = (d: Date) => d.toISOString().slice(0, 10);
 
-    const branches = await prisma.branch.findMany({
-      where: { organizationId, isActive: true },
-      include: {
-        assignments: {
-          where: { isCurrent: true },
-          include: { employee: true },
+    const [staff, records, holidays] = await Promise.all([
+      prisma.employee.findMany({
+        where: { organizationId, status: EmployeeStatus.ACTIVE, employeeType: { in: [...STAFF_TYPES] }, deletedAt: null },
+        select: {
+          id: true,
+          employeeType: true,
+          staffCategory: true,
+          createdAt: true,
+          branchAssignments: { where: { isCurrent: true }, select: { branch: { select: { id: true, name: true, district: true } } } },
         },
-      },
-    });
-
-    // Determine date range in IST
-    const now = new Date();
-    const todayIST = getISTWorkDate(now);
-    const startDate = new Date(todayIST.getTime() - (days - 1) * 86400000);
-
-    const records = await prisma.attendanceRecord.findMany({
-      where: {
-        organizationId,
-        workDate: {
-          gte: startDate,
+      }),
+      prisma.attendanceRecord.findMany({
+        where: { organizationId, workDate: { gte: startDate, lte: todayIST } },
+        select: {
+          employeeId: true,
+          workDate: true,
+          status: true,
+          isLate: true,
+          checkInAt: true,
+          checkOutAt: true,
+          checkInGeofenceValid: true,
+          checkInIsMockLocation: true,
+          checkInFaceScore: true,
+          workReport: true,
         },
-      },
-      include: {
-        employee: {
-          include: {
-            branchAssignments: {
-              where: { isCurrent: true },
-              include: { branch: true },
-            },
-          },
-        },
-      },
-      orderBy: { workDate: 'asc' },
-    });
+      }),
+      prisma.holiday.findMany({
+        where: { organizationId, isActive: true, holidayDate: { gte: startDate, lte: todayIST } },
+        select: { holidayDate: true, name: true },
+      }),
+    ]);
 
-    // Group records by day
-    const dayMap = new Map<string, typeof records>();
-    for (let i = 0; i < days; i++) {
-      const d = new Date(startDate);
-      d.setUTCDate(d.getUTCDate() + i);
-      const key = d.toISOString().slice(0, 10);
-      dayMap.set(key, []);
+    const holidayMap = new Map(holidays.map((h) => [key(h.holidayDate), h.name]));
+    const present = records.filter((r) => r.status !== AttendanceStatus.ABSENT && r.checkInAt);
+    const catOf = (e: { staffCategory: string | null; employeeType: string }) =>
+      e.staffCategory ?? (e.employeeType === 'FIELD_STAFF' ? 'UNCLASSIFIED_FIELD' : 'UNCLASSIFIED_OFFICE');
+    const staffById = new Map(staff.map((s) => [s.id, s]));
+    // An employee counts as expected from the day they were added (midnight IST after the work date).
+    const endOfDay = (d: Date) => d.getTime() + DAY_MS - 5.5 * 3_600_000;
+    const expectedOn = (d: Date) => staff.filter((s) => s.createdAt.getTime() < endOfDay(d)).length;
+
+    // Daily trend
+    const byDay = new Map<string, typeof present>();
+    for (const r of present) byDay.set(key(r.workDate), [...(byDay.get(key(r.workDate)) ?? []), r]);
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const trends = Array.from({ length: span }, (_, i) => {
+      const d = new Date(startDate.getTime() + i * DAY_MS);
+      const k = key(d);
+      const list = byDay.get(k) ?? [];
+      const expected = holidayMap.has(k) ? 0 : Math.max(expectedOn(d), list.length);
+      const late = list.filter((r) => r.isLate).length;
+      return {
+        date: k,
+        dayOfWeek: dayNames[d.getUTCDay()],
+        holiday: holidayMap.get(k) ?? null,
+        expected,
+        present: list.length,
+        onTime: list.length - late,
+        late,
+        absent: Math.max(0, expected - list.length),
+        rate: expected > 0 ? Math.round((list.length / expected) * 100) : null,
+      };
+    });
+    const workingDays = trends.filter((t) => t.expected > 0);
+
+    // Staff categories
+    const catAgg = new Map<string, { staff: number; presentDays: number; late: number; possible: number }>();
+    for (const s of staff) {
+      const c = catOf(s);
+      const a = catAgg.get(c) ?? { staff: 0, presentDays: 0, late: 0, possible: 0 };
+      a.staff += 1;
+      a.possible += workingDays.filter((t) => s.createdAt.getTime() < endOfDay(new Date(`${t.date}T00:00:00Z`))).length;
+      catAgg.set(c, a);
     }
+    for (const r of present) {
+      const s = staffById.get(r.employeeId);
+      if (!s) continue;
+      const a = catAgg.get(catOf(s))!;
+      a.presentDays += 1;
+      if (r.isLate) a.late += 1;
+    }
+    const categories = Array.from(catAgg.entries()).map(([k, a]) => ({
+      key: k,
+      label:
+        CATEGORY_LABEL[k as keyof typeof CATEGORY_LABEL] ??
+        (k === 'UNCLASSIFIED_FIELD' ? 'Field Staff (not classified)' : 'Office Staff (not classified)'),
+      staff: a.staff,
+      presentDays: a.presentDays,
+      lateDays: a.late,
+      rate: a.possible > 0 ? Math.min(100, Math.round((a.presentDays / a.possible) * 100)) : 0,
+    }));
 
-    for (const rec of records) {
-      const key = rec.workDate.toISOString().slice(0, 10);
-      if (dayMap.has(key)) {
-        dayMap.get(key)!.push(rec);
+    // Locations (current assignment)
+    const todayKey = key(todayIST);
+    const locAgg = new Map<
+      string,
+      { id: string; name: string; district: string; staff: Set<string>; presentDays: number; today: number; inFence: number; checked: number }
+    >();
+    for (const s of staff) {
+      const b = s.branchAssignments[0]?.branch;
+      if (!b) continue;
+      const a = locAgg.get(b.id) ?? { id: b.id, name: b.name, district: b.district, staff: new Set<string>(), presentDays: 0, today: 0, inFence: 0, checked: 0 };
+      a.staff.add(s.id);
+      locAgg.set(b.id, a);
+    }
+    for (const r of present) {
+      const b = staffById.get(r.employeeId)?.branchAssignments[0]?.branch;
+      if (!b) continue;
+      const a = locAgg.get(b.id)!;
+      a.presentDays += 1;
+      if (key(r.workDate) === todayKey) a.today += 1;
+      if (r.checkInGeofenceValid !== null) {
+        a.checked += 1;
+        if (r.checkInGeofenceValid) a.inFence += 1;
       }
     }
+    const locations = Array.from(locAgg.values())
+      .map((a) => ({
+        id: a.id,
+        name: a.name,
+        district: a.district,
+        staff: a.staff.size,
+        presentToday: a.today,
+        rate:
+          workingDays.length && a.staff.size ? Math.min(100, Math.round((a.presentDays / (a.staff.size * workingDays.length)) * 100)) : 0,
+        geofenceRate: a.checked ? Math.round((a.inFence / a.checked) * 100) : null,
+      }))
+      .sort((a, b) => b.staff - a.staff || a.name.localeCompare(b.name));
 
-    const trends = Array.from(dayMap.entries()).map(([dateStr, dayRecords]) => {
-      const d = new Date(dateStr);
-      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const dayOfWeek = dayNames[d.getUTCDay()];
-
-      const officePresent = dayRecords.filter(
-        (r) => r.employee.employeeType === 'OFFICE_STAFF' && r.status !== AttendanceStatus.ABSENT
-      ).length;
-      const fieldPresent = dayRecords.filter(
-        (r) => r.employee.employeeType === 'FIELD_STAFF' && r.status !== AttendanceStatus.ABSENT
-      ).length;
-      const totalPresent = officePresent + fieldPresent;
-      const reportCount = dayRecords.filter((r) => !!r.workReport).length;
-      const geofenceValidCount = dayRecords.filter(
-        (r) => r.checkInGeofenceValid === true
-      ).length;
-
-      const rate = totalActiveEmployees > 0 ? Math.round((totalPresent / totalActiveEmployees) * 100) : 0;
-
-      return {
-        date: dateStr,
-        dayOfWeek,
-        totalPresent,
-        officePresent,
-        fieldPresent,
-        absentCount: Math.max(0, totalActiveEmployees - totalPresent),
-        reportCount,
-        geofenceValidCount,
-        rate,
-      };
+    // Check-in time distribution (IST hour)
+    const hourOf = (d: Date) => Number(d.toLocaleString('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', hour12: false })) % 24;
+    const hours = new Map<number, { onTime: number; late: number }>();
+    for (const r of present) {
+      const h = hourOf(r.checkInAt!);
+      const v = hours.get(h) ?? { onTime: 0, late: 0 };
+      if (r.isLate) v.late += 1;
+      else v.onTime += 1;
+      hours.set(h, v);
+    }
+    const hourKeys = Array.from(hours.keys());
+    const minH = Math.min(7, ...hourKeys);
+    const maxH = Math.max(19, ...hourKeys);
+    const checkInHours = Array.from({ length: maxH - minH + 1 }, (_, i) => {
+      const h = minH + i;
+      return { hour: h, label: `${String(h).padStart(2, '0')}:00`, ...(hours.get(h) ?? { onTime: 0, late: 0 }) };
     });
 
-    // Branch Performance Breakdown
-    const branchPerformance = branches.map((b) => {
-      const branchStaffCount = b.assignments.length;
-      const branchStaffIds = new Set(b.assignments.map((a) => a.employeeId));
-
-      const branchRecordsToday = (records || []).filter((r) => {
-        const isToday = r.workDate.toISOString().slice(0, 10) === todayIST.toISOString().slice(0, 10);
-        return isToday && branchStaffIds.has(r.employeeId);
-      });
-
-      const presentToday = branchRecordsToday.length;
-      const geofenceValidToday = branchRecordsToday.filter(
-        (r) => r.checkInGeofenceValid === true
-      ).length;
-
-      const attendanceRate = branchStaffCount > 0 ? Math.round((presentToday / branchStaffCount) * 100) : 0;
-      const geofenceComplianceRate = presentToday > 0 ? Math.round((geofenceValidToday / presentToday) * 100) : 100;
-
-      return {
-        id: b.id,
-        name: b.name,
-        branchCode: b.branchCode,
-        district: b.district,
-        totalStaff: branchStaffCount,
-        presentToday,
-        attendanceRate,
-        geofenceComplianceRate,
-        radiusMetres: b.geofenceRadiusMetres,
-      };
-    });
-
-    // Aggregate overall KPI metrics
-    const totalRecords = records.length;
-    const totalWithReports = records.filter((r) => !!r.workReport).length;
-    const totalGeofenceValid = records.filter(
-      (r) => r.checkInGeofenceValid === true
-    ).length;
-
-    const avgRate =
-      trends.length > 0 ? Math.round(trends.reduce((acc, t) => acc + t.rate, 0) / trends.length) : 0;
-    const reportRate = totalRecords > 0 ? Math.round((totalWithReports / totalRecords) * 100) : 0;
-    const geofenceRate = totalRecords > 0 ? Math.round((totalGeofenceValid / totalRecords) * 100) : 100;
+    // KPIs
+    const totalExpected = workingDays.reduce((a, t) => a + t.expected, 0);
+    const worked = present
+      .filter((r) => r.checkOutAt)
+      .map((r) => (r.checkOutAt!.getTime() - r.checkInAt!.getTime()) / 3_600_000);
+    const fenceChecked = present.filter((r) => r.checkInGeofenceValid !== null);
+    const lateCount = present.filter((r) => r.isLate).length;
+    const pct = (n: number, d: number, empty: number) => (d ? Math.round((n / d) * 100) : empty);
 
     return {
-      timeframeDays: days,
-      totalActiveEmployees,
+      timeframeDays: span,
+      from: key(startDate),
+      to: todayKey,
+      totalActiveEmployees: staff.length,
       kpis: {
-        overallAttendanceRate: avgRate,
-        workReportCompletionRate: reportRate,
-        geofenceComplianceRate: geofenceRate,
-        totalAttendanceEntries: totalRecords,
+        attendanceRate: pct(present.length, totalExpected, 0),
+        punctualityRate: pct(present.length - lateCount, present.length, 100),
+        geofenceComplianceRate: pct(fenceChecked.filter((r) => r.checkInGeofenceValid).length, fenceChecked.length, 100),
+        avgHoursWorked: worked.length ? Math.round((worked.reduce((a, b) => a + b, 0) / worked.length) * 10) / 10 : 0,
+        workReportRate: pct(present.filter((r) => !!r.workReport).length, present.length, 0),
+        faceVerifiedRate: pct(present.filter((r) => r.checkInFaceScore !== null).length, present.length, 0),
+        mockLocationFlags: present.filter((r) => r.checkInIsMockLocation).length,
+        totalCheckIns: present.length,
+        lateCount,
       },
       trends,
-      branchPerformance,
+      categories,
+      locations,
+      checkInHours,
     };
   }
 }

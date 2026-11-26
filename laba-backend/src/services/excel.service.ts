@@ -227,8 +227,8 @@ export class ExcelService {
     }
     wsField.getRow(1).eachCell((cell) => Object.assign(cell, headerStyle));
 
-    // ── SHEET 6: CORRECTIONS & AUDIT ────────────────────────────────────────────
-    const wsCorrections = workbook.addWorksheet('Corrections & Audit');
+    // ── SHEET 6: CORRECTIONS ────────────────────────────────────────────
+    const wsCorrections = workbook.addWorksheet('Corrections');
     wsCorrections.columns = [
       { header: 'Correction ID', key: 'id', width: 36 },
       { header: 'Employee Code', key: 'code', width: 16 },

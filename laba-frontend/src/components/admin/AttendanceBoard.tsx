@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshCw, Loader2, Search, Camera, Edit2, Trash2, X, MapPin, Clock, Route, Tent, AlertTriangle, ScanFace } from 'lucide-react';
 import { apiClient, apiErrorMessage } from '@/lib/api';
 import { CATEGORIES, DAY_STATUS, categoryLabel, fmtIST, fmtDate, istToday, locationTypeLabel } from '@/lib/staff';
@@ -9,13 +9,15 @@ interface Props {
   onEditRecord: (record: any) => void;
   onDeleteRecord: (record: any) => void;
   refreshKey?: number;
+  /** Filters pushed in by a click on a dashboard chart. */
+  focus?: { date?: string; status?: string; category?: string; location?: string; nonce: number } | null;
 }
 
 const CATEGORY_ORDER = [...CATEGORIES.map((c) => c.value as string), 'UNCLASSIFIED_OFFICE', 'UNCLASSIFIED_FIELD'];
 const STAT_ORDER = ['NOT_YET', 'ABSENT', 'PRESENT', 'COMPLETED', 'CORRECTED', 'NO_TASKS', 'HOLIDAY', 'UPCOMING'];
 
 /** Every active staff member's attendance for a date, grouped by staff category and location. */
-export function AttendanceBoard({ onEditRecord, onDeleteRecord, refreshKey = 0 }: Props) {
+export function AttendanceBoard({ onEditRecord, onDeleteRecord, refreshKey = 0, focus }: Props) {
   const [date, setDate] = useState(istToday());
   const [board, setBoard] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,6 +27,17 @@ export function AttendanceBoard({ onEditRecord, onDeleteRecord, refreshKey = 0 }
   const [location, setLocation] = useState<string>('ALL');
   const [search, setSearch] = useState('');
   const [selfie, setSelfie] = useState<{ title: string; src: string | null; error?: string } | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!focus) return;
+    if (focus.date) setDate(focus.date);
+    if (focus.status) setStatus(focus.status);
+    if (focus.category) setCategory(focus.category);
+    if (focus.location) setLocation(focus.location);
+    setSearch('');
+    rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [focus]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,7 +110,7 @@ export function AttendanceBoard({ onEditRecord, onDeleteRecord, refreshKey = 0 }
   const catKeys = board ? Object.keys(board.byCategory).sort((a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b)) : [];
 
   return (
-    <div className="space-y-4">
+    <div ref={rootRef} className="space-y-4 scroll-mt-32">
       {/* Controls */}
       <div className="bg-white border border-[#E2E8F0] rounded-xl p-3 sm:p-4 space-y-3">
         <div className="flex flex-wrap items-center gap-2">

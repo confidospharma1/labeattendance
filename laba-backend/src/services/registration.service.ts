@@ -73,17 +73,6 @@ export class RegistrationService {
           },
         });
       }
-      await tx.auditLog.create({
-        data: {
-          organizationId: org.id,
-          actorId: user.id,
-          actorRole: input.employeeType,
-          action: 'EMPLOYEE_SELF_REGISTERED',
-          entityType: 'employees',
-          entityId: emp.id,
-          ipAddress: ipAddress || null,
-        },
-      });
       return emp;
     });
 
@@ -151,17 +140,6 @@ export class RegistrationService {
         },
       });
       await tx.user.update({ where: { id: employee.userId }, data: { role: employeeType } });
-      await tx.auditLog.create({
-        data: {
-          organizationId,
-          actorId: adminUserId,
-          actorRole: 'ADMIN',
-          action: 'EMPLOYEE_APPROVED',
-          entityType: 'employees',
-          entityId: employeeId,
-          afterState: { employeeType, staffCategory: category, branchId: input.branchId ?? null },
-        },
-      });
       return { id: updated.id, status: updated.status, employeeType: updated.employeeType };
     });
   }
@@ -172,17 +150,6 @@ export class RegistrationService {
     });
     if (!employee) throw new AppError('Pending registration not found.', 404, 'NOT_FOUND');
     await prisma.employee.update({ where: { id: employeeId }, data: { status: 'REJECTED', rejectionReason: reason } });
-    await prisma.auditLog.create({
-      data: {
-        organizationId,
-        actorId: adminUserId,
-        actorRole: 'ADMIN',
-        action: 'EMPLOYEE_REJECTED',
-        entityType: 'employees',
-        entityId: employeeId,
-        metadata: { reason },
-      },
-    });
     return { id: employeeId, status: 'REJECTED' };
   }
 }

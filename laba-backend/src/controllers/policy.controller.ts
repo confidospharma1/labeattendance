@@ -81,19 +81,6 @@ export class PolicyController {
           },
         });
 
-        await tx.auditLog.create({
-          data: {
-            organizationId: req.user!.organizationId,
-            actorId: req.user!.userId,
-            actorRole: req.user!.role,
-            action: 'POLICY_UPDATE',
-            entityType: 'AttendancePolicy',
-            entityId: newPolicy.id,
-            afterState: JSON.parse(JSON.stringify(newPolicy)),
-            ipAddress: req.ip || null,
-            userAgent: req.headers['user-agent'] || null,
-          },
-        });
 
         return newPolicy;
       });

@@ -99,24 +99,6 @@ export class BranchService {
       },
     });
 
-    // Audit log
-    await prisma.auditLog.create({
-      data: {
-        organizationId,
-        actorId: creatorUserId,
-        actorRole: 'ADMIN',
-        action: 'BRANCH_CREATED',
-        entityType: 'branches',
-        entityId: branch.id,
-        afterState: {
-          name: branch.name,
-          branchCode: branch.branchCode,
-          latitude: input.latitude,
-          longitude: input.longitude,
-          geofenceRadiusMetres: branch.geofenceRadiusMetres,
-        },
-      },
-    });
 
     return branch;
   }
@@ -225,7 +207,7 @@ export class BranchService {
   }
 
   /**
-   * Updates branch details, coordinates, or geofence boundary with historical coordinate audit log.
+   * Updates branch details, coordinates, or geofence boundary.
    */
   public async updateBranch(
     updaterUserId: string,
@@ -267,42 +249,6 @@ export class BranchService {
       },
     });
 
-    // Record audit log if coordinates or radius changed
-    const coordsChanged =
-      (input.latitude !== undefined && input.latitude !== existing.latitude.toNumber()) ||
-      (input.longitude !== undefined && input.longitude !== existing.longitude.toNumber()) ||
-      (input.geofenceRadiusMetres !== undefined && input.geofenceRadiusMetres !== existing.geofenceRadiusMetres) ||
-      input.geofenceShape !== undefined ||
-      input.territory !== undefined;
-
-    if (coordsChanged) {
-      await prisma.auditLog.create({
-        data: {
-          organizationId,
-          actorId: updaterUserId,
-          actorRole: 'ADMIN',
-          action: 'BRANCH_GPS_UPDATED',
-          entityType: 'branches',
-          entityId: branchId,
-          beforeState: {
-            latitude: existing.latitude.toNumber(),
-            longitude: existing.longitude.toNumber(),
-            geofenceRadiusMetres: existing.geofenceRadiusMetres,
-            geofenceShape: existing.geofenceShape,
-            boundaryLabel: existing.boundaryLabel,
-            territoryLabel: existing.territoryLabel,
-          },
-          afterState: {
-            latitude: updated.latitude.toNumber(),
-            longitude: updated.longitude.toNumber(),
-            geofenceRadiusMetres: updated.geofenceRadiusMetres,
-            geofenceShape: updated.geofenceShape,
-            boundaryLabel: updated.boundaryLabel,
-            territoryLabel: updated.territoryLabel,
-          },
-        },
-      });
-    }
 
     return {
       ...updated,
@@ -338,22 +284,6 @@ export class BranchService {
         where: { id: branchId },
       });
 
-      // 3. Record audit log
-      await tx.auditLog.create({
-        data: {
-          organizationId,
-          actorId: deleterUserId,
-          actorRole: 'ADMIN',
-          action: 'BRANCH_DELETED',
-          entityType: 'branches',
-          entityId: branchId,
-          beforeState: {
-            branchCode: existing.branchCode,
-            name: existing.name,
-          },
-          afterState: { deleted: true },
-        },
-      });
 
       return {
         success: true,

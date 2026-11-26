@@ -60,17 +60,6 @@ export class FaceService {
       },
     });
 
-    await prisma.auditLog.create({
-      data: {
-        organizationId,
-        actorId: userId,
-        actorRole: 'EMPLOYEE',
-        action: 'FACE_ENROLLED',
-        entityType: 'face_profiles',
-        entityId: profile.id,
-        metadata: { samples: input.descriptors.length },
-      },
-    });
 
     return { enrolled: true, enrolledAt: profile.createdAt };
   }
@@ -80,16 +69,6 @@ export class FaceService {
     const employee = await prisma.employee.findFirst({ where: { id: employeeId, organizationId } });
     if (!employee) throw new AppError('Employee not found.', 404, 'NOT_FOUND');
     await prisma.faceProfile.deleteMany({ where: { employeeId } });
-    await prisma.auditLog.create({
-      data: {
-        organizationId,
-        actorId: adminUserId,
-        actorRole: 'ADMIN',
-        action: 'FACE_RESET',
-        entityType: 'employees',
-        entityId: employeeId,
-      },
-    });
     return { reset: true };
   }
 

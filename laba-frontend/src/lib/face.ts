@@ -78,7 +78,7 @@ export function readFrame(result: Result): FaceFrame {
   };
 }
 
-/** Small JPEG thumbnail of the current video frame for the admin audit trail. */
+/** Small JPEG thumbnail of the current video frame stored with the attendance record for admin review. */
 export function captureSelfie(video: HTMLVideoElement, width = 240): string {
   const canvas = document.createElement('canvas');
   const ratio = video.videoHeight / video.videoWidth || 0.75;

@@ -138,10 +138,10 @@ export class AttendanceController {
 
   async getAnalytics(req: Request, res: Response, next: NextFunction) {
     try {
-      const days = req.query.days ? parseInt(req.query.days as string, 10) : 7;
+      const days = req.query.days ? parseInt(req.query.days as string, 10) : 14;
       const analytics = await attendanceService.getAnalytics(
         req.user!.organizationId,
-        Number.isNaN(days) ? 7 : days
+        Number.isNaN(days) ? 14 : days
       );
       return sendSuccess(res, analytics);
     } catch (error) {

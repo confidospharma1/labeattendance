@@ -113,25 +113,6 @@ export class EmployeeService {
         });
       }
 
-      // 5. Audit Log creation
-      await tx.auditLog.create({
-        data: {
-          organizationId,
-          actorId: creatorUserId,
-          actorRole: 'ADMIN',
-          action: 'EMPLOYEE_CREATED',
-          entityType: 'employees',
-          entityId: employee.id,
-          afterState: {
-            employeeCode,
-            fullName: employee.fullName,
-            employeeType: employee.employeeType,
-            staffCategory: category,
-            designation: employee.designation,
-            branchId,
-          },
-        },
-      });
 
       return {
         id: employee.id,
@@ -369,32 +350,6 @@ export class EmployeeService {
         },
       });
 
-      await tx.auditLog.create({
-        data: {
-          organizationId,
-          actorId: updaterUserId,
-          actorRole: 'ADMIN',
-          action: 'EMPLOYEE_UPDATED',
-          entityType: 'employees',
-          entityId: employeeId,
-          beforeState: {
-            fullName: existing.fullName,
-            mobile: existing.mobile,
-            status: existing.status,
-            staffCategory: existing.staffCategory,
-            designation: existing.designation,
-            employeeCode: existing.employeeCode,
-          },
-          afterState: {
-            fullName: updated.fullName,
-            mobile: updated.mobile,
-            status: updated.status,
-            staffCategory: updated.staffCategory,
-            designation: updated.designation,
-            employeeCode: updated.employeeCode,
-          },
-        },
-      });
 
       return updated;
     });
@@ -459,23 +414,6 @@ export class EmployeeService {
         where: { id: existing.userId },
       });
 
-      // 8. Record immutable audit log
-      await tx.auditLog.create({
-        data: {
-          organizationId,
-          actorId: deleterUserId,
-          actorRole: 'ADMIN',
-          action: 'EMPLOYEE_DELETED',
-          entityType: 'employees',
-          entityId: employeeId,
-          beforeState: {
-            employeeCode: existing.employeeCode,
-            fullName: existing.fullName,
-            email: existing.user.email,
-          },
-          afterState: { deleted: true },
-        },
-      });
 
       return { success: true, message: `Employee ${existing.fullName} (${existing.employeeCode}) was permanently removed.` };
     });
@@ -514,19 +452,6 @@ export class EmployeeService {
         data: { isActive: isUserActive },
       });
 
-      // Audit log
-      await tx.auditLog.create({
-        data: {
-          organizationId,
-          actorId: updaterUserId,
-          actorRole: 'ADMIN',
-          action: `EMPLOYEE_STATUS_${input.status}`,
-          entityType: 'employees',
-          entityId: employeeId,
-          beforeState: { status: employee.status },
-          afterState: { status: input.status, reason: input.reason },
-        },
-      });
 
       return updated;
     });

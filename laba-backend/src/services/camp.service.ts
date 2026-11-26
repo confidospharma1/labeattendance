@@ -126,17 +126,6 @@ export class CampService {
         assignments: { create: [...new Set(input.employeeIds)].map((employeeId) => ({ employeeId })) },
       },
     });
-    await prisma.auditLog.create({
-      data: {
-        organizationId,
-        actorId: adminUserId,
-        actorRole: 'ADMIN',
-        action: 'CAMP_CREATED',
-        entityType: 'camps',
-        entityId: camp.id,
-        metadata: { name: camp.name, campDate: input.campDate, staff: input.employeeIds.length },
-      },
-    });
     return camp;
   }
 
@@ -173,9 +162,6 @@ export class CampService {
         const add = [...wanted].filter((e) => !have.has(e));
         if (add.length) await tx.campAssignment.createMany({ data: add.map((employeeId) => ({ campId: id, employeeId })) });
       }
-      await tx.auditLog.create({
-        data: { organizationId, actorId: adminUserId, actorRole: 'ADMIN', action: 'CAMP_UPDATED', entityType: 'camps', entityId: id },
-      });
       return camp;
     });
   }
@@ -188,9 +174,6 @@ export class CampService {
       return { cancelled: true, message: 'Staff already checked in, so the camp was cancelled instead of deleted.' };
     }
     await prisma.camp.delete({ where: { id } });
-    await prisma.auditLog.create({
-      data: { organizationId, actorId: adminUserId, actorRole: 'ADMIN', action: 'CAMP_DELETED', entityType: 'camps', entityId: id, metadata: { name: camp.name } },
-    });
     return { deleted: true };
   }
 
@@ -290,19 +273,6 @@ export class CampService {
           },
         });
       }
-      await tx.auditLog.create({
-        data: {
-          organizationId: employee.organizationId,
-          actorId: userId,
-          actorRole: employee.employeeType,
-          action: 'CAMP_CHECK_IN',
-          entityType: 'camps',
-          entityId: a.camp.id,
-          ipAddress: ipAddress || null,
-          userAgent: userAgent || null,
-          metadata: { distanceMetres: geo.distanceMetres, shape: geo.shape, faceScore },
-        },
-      });
       return row;
     });
     return describe(a.camp, updated, now);
@@ -354,19 +324,6 @@ export class CampService {
           checkOutLocationName: `Camp: ${a.camp.name}`,
           checkOutFaceScore: faceScore,
           workReport: `Camp ${a.camp.name}: ${input.report.trim()}`,
-        },
-      });
-      await tx.auditLog.create({
-        data: {
-          organizationId: employee.organizationId,
-          actorId: userId,
-          actorRole: employee.employeeType,
-          action: 'CAMP_CHECK_OUT',
-          entityType: 'camps',
-          entityId: a.camp.id,
-          ipAddress: ipAddress || null,
-          userAgent: userAgent || null,
-          metadata: { distanceMetres: geo.distanceMetres, faceScore },
         },
       });
       return row;

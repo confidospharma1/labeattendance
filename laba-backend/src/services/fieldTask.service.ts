@@ -83,11 +83,6 @@ export class FieldTaskService {
     return task;
   }
 
-  private async audit(organizationId: string, actorId: string, actorRole: string, action: string, entityId: string, metadata?: object) {
-    await prisma.auditLog.create({
-      data: { organizationId, actorId, actorRole, action, entityType: 'field_tasks', entityId, metadata: metadata as any },
-    });
-  }
 
   async createTask(adminUserId: string, organizationId: string, input: CreateTaskInput) {
     await this.assertFieldStaff(organizationId, input.employeeId);
@@ -117,11 +112,6 @@ export class FieldTaskService {
         assignedById: adminUserId,
       },
     });
-    await this.audit(organizationId, adminUserId, 'ADMIN', 'FIELD_TASK_CREATED', task.id, {
-      employeeId: input.employeeId,
-      taskDate: input.taskDate,
-      title: input.title,
-    });
     return describeTask(task);
   }
 
@@ -149,8 +139,6 @@ export class FieldTaskService {
         ...(input.sequence !== undefined && { sequence: input.sequence }),
       },
     });
-    const { boundary: _b, ...auditInput } = input;
-    await this.audit(organizationId, adminUserId, 'ADMIN', 'FIELD_TASK_UPDATED', id, auditInput);
     return describeTask(updated);
   }
 
@@ -158,12 +146,10 @@ export class FieldTaskService {
     const task = await this.getOrgTask(organizationId, id);
     if (task.status === 'PENDING') {
       await prisma.fieldTask.delete({ where: { id } });
-      await this.audit(organizationId, adminUserId, 'ADMIN', 'FIELD_TASK_DELETED', id, { title: task.title });
       return { deleted: true };
     }
     // Keep visited/completed tasks as evidence; cancel instead.
     await prisma.fieldTask.update({ where: { id }, data: { status: 'CANCELLED' } });
-    await this.audit(organizationId, adminUserId, 'ADMIN', 'FIELD_TASK_CANCELLED', id, { title: task.title });
     return { cancelled: true };
   }
 
@@ -214,11 +200,6 @@ export class FieldTaskService {
         })
       )
     );
-    await this.audit(organizationId, adminUserId, 'ADMIN', 'FIELD_TASKS_COPIED', employeeId, {
-      fromDate,
-      toDate: toDateStr,
-      count: created.length,
-    });
     return created.map((t) => describeTask(t));
   }
 
@@ -256,7 +237,6 @@ export class FieldTaskService {
         lateAccessUntil: decision === 'APPROVED' ? new Date(now.getTime() + policy.lateAccessHours * 3600_000) : null,
       },
     });
-    await this.audit(organizationId, adminUserId, 'ADMIN', `FIELD_TASK_LATE_${decision}`, id, { note });
     return describeTask(updated);
   }
 
@@ -377,19 +357,6 @@ export class FieldTaskService {
         });
       }
 
-      await tx.auditLog.create({
-        data: {
-          organizationId: employee.organizationId,
-          actorId: userId,
-          actorRole: 'FIELD_STAFF',
-          action: 'FIELD_TASK_VISITED',
-          entityType: 'field_tasks',
-          entityId: id,
-          ipAddress: ipAddress || null,
-          userAgent: userAgent || null,
-          metadata: { distanceMetres: geo.distanceMetres, radius: task.radiusMetres, faceScore, late: info.deadlinePassed },
-        },
-      });
       return t;
     });
 
@@ -458,19 +425,6 @@ export class FieldTaskService {
         });
       }
 
-      await tx.auditLog.create({
-        data: {
-          organizationId: employee.organizationId,
-          actorId: userId,
-          actorRole: 'FIELD_STAFF',
-          action: status === 'LATE_COMPLETED' ? 'FIELD_TASK_LATE_COMPLETED' : 'FIELD_TASK_COMPLETED',
-          entityType: 'field_tasks',
-          entityId: id,
-          ipAddress: ipAddress || null,
-          userAgent: userAgent || null,
-          metadata: { distanceMetres: geo.distanceMetres, dayClosed: open === 0 },
-        },
-      });
       return t;
     });
 
@@ -494,7 +448,6 @@ export class FieldTaskService {
       where: { id },
       data: { lateAccessStatus: 'REQUESTED', lateRequestReason: reason, lateRequestedAt: new Date() },
     });
-    await this.audit(employee.organizationId, userId, 'FIELD_STAFF', 'FIELD_TASK_LATE_REQUESTED', id, { reason });
     return describeTask(updated);
   }
 }

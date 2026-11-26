@@ -104,19 +104,6 @@ export class AuthService {
       },
     });
 
-    // Record login in audit log
-    await prisma.auditLog.create({
-      data: {
-        organizationId: user.organizationId,
-        actorId: user.id,
-        actorRole: user.role,
-        action: 'USER_LOGIN',
-        entityType: 'users',
-        entityId: user.id,
-        ipAddress: ipAddress || null,
-        userAgent: userAgent || null,
-      },
-    });
 
     const token = signToken({
       userId: user.id,
@@ -182,16 +169,6 @@ export class AuthService {
       data: { passwordHash: newHash },
     });
 
-    await prisma.auditLog.create({
-      data: {
-        organizationId: user.organizationId,
-        actorId: user.id,
-        actorRole: user.role,
-        action: 'PASSWORD_CHANGED',
-        entityType: 'users',
-        entityId: user.id,
-      },
-    });
 
     return { success: true };
   }

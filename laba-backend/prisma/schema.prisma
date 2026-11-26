@@ -118,6 +118,11 @@ model Organization {
   slug      String   @unique @db.VarChar(100)
   timezone  String   @default("Asia/Kolkata") @db.VarChar(50)
   isActive  Boolean  @default(true) @map("is_active")
+  // Data retention: attendance history older than retentionDays is archived to Excel and deleted
+  retentionDays     Int       @default(90) @map("retention_days")
+  lastPurgeAt       DateTime? @map("last_purge_at") @db.Timestamptz
+  lastPurgedThrough DateTime? @map("last_purged_through") @db.Date
+  lastArchiveAt     DateTime? @map("last_archive_at") @db.Timestamptz
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -128,7 +133,6 @@ model Organization {
   attendanceRecords     AttendanceRecord[]
   holidays              Holiday[]
   attendanceCorrections AttendanceCorrection[]
-  auditLogs             AuditLog[]
   fieldTasks            FieldTask[]
   shifts                Shift[]
   camps                 Camp[]
@@ -160,7 +164,6 @@ model User {
   createdPolicies          AttendancePolicy[]     @relation("PolicyCreatedBy")
   reviewedCorrections      AttendanceCorrection[] @relation("ReviewedBy")
   requestedCorrections     AttendanceCorrection[] @relation("RequestedBy")
-  auditLogs                AuditLog[]
   createdEmployees         Employee[]             @relation("CreatedBy")
   createdBranches          Branch[]
   createdCamps             Camp[]                 @relation("CampCreatedBy")
@@ -467,30 +470,6 @@ model AttendanceCorrection {
   @@index([organizationId, status])
   @@index([employeeId])
   @@map("attendance_corrections")
-}
-
-model AuditLog {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId String   @map("organization_id") @db.Uuid
-  actorId        String   @map("actor_id") @db.Uuid
-  actorRole      String   @map("actor_role") @db.VarChar(50)
-  action         String   @db.VarChar(100)
-  entityType     String   @map("entity_type") @db.VarChar(100)
-  entityId       String?  @map("entity_id") @db.Uuid
-  beforeState    Json?    @map("before_state")
-  afterState     Json?    @map("after_state")
-  ipAddress      String?  @map("ip_address") @db.VarChar(45)
-  userAgent      String?  @map("user_agent") @db.Text
-  metadata       Json?
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  organization Organization @relation(fields: [organizationId], references: [id])
-  actor        User         @relation(fields: [actorId], references: [id])
-
-  @@index([organizationId, createdAt])
-  @@index([actorId])
-  @@index([entityType, entityId])
-  @@map("audit_logs")
 }
 
 model Holiday {
