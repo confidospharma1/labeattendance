@@ -817,7 +817,7 @@ export class AttendanceService {
     const startDate = new Date(todayIST.getTime() - (span - 1) * DAY_MS);
     const key = (d: Date) => d.toISOString().slice(0, 10);
 
-    const [staff, records, holidays] = await Promise.all([
+    const [staff, records, holidays, visits] = await Promise.all([
       prisma.employee.findMany({
         where: { organizationId, status: EmployeeStatus.ACTIVE, employeeType: { in: [...STAFF_TYPES] }, deletedAt: null },
         select: {
@@ -847,10 +847,36 @@ export class AttendanceService {
         where: { organizationId, isActive: true, holidayDate: { gte: startDate, lte: todayIST } },
         select: { holidayDate: true, name: true },
       }),
+      // Route-based staff (marketing executives) prove presence by visiting stops, not by checking in.
+      prisma.fieldTask.findMany({
+        where: { organizationId, taskDate: { gte: startDate, lte: todayIST }, visitedAt: { not: null } },
+        select: { employeeId: true, taskDate: true, visitedAt: true, completedAt: true, visitFaceScore: true, status: true },
+        orderBy: { visitedAt: 'asc' },
+      }),
     ]);
 
     const holidayMap = new Map(holidays.map((h) => [key(h.holidayDate), h.name]));
     const present = records.filter((r) => r.status !== AttendanceStatus.ABSENT && r.checkInAt);
+    const seen = new Set(present.map((r) => `${r.employeeId}|${key(r.workDate)}`));
+    for (const v of visits) {
+      const k = `${v.employeeId}|${key(v.taskDate)}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const dayVisits = visits.filter((x) => x.employeeId === v.employeeId && key(x.taskDate) === key(v.taskDate));
+      const lastDone = dayVisits.map((x) => x.completedAt).filter(Boolean).pop() ?? null;
+      present.push({
+        employeeId: v.employeeId,
+        workDate: v.taskDate,
+        status: AttendanceStatus.CHECKED_IN,
+        isLate: dayVisits.some((x) => x.status === 'LATE_COMPLETED'),
+        checkInAt: v.visitedAt,
+        checkOutAt: lastDone,
+        checkInGeofenceValid: true, // a stop can only be visited from inside its geofence
+        checkInIsMockLocation: false,
+        checkInFaceScore: v.visitFaceScore,
+        workReport: lastDone ? 'route completed' : null,
+      });
+    }
     const catOf = (e: { staffCategory: string | null; employeeType: string }) =>
       e.staffCategory ?? (e.employeeType === 'FIELD_STAFF' ? 'UNCLASSIFIED_FIELD' : 'UNCLASSIFIED_OFFICE');
     const staffById = new Map(staff.map((s) => [s.id, s]));
@@ -866,12 +892,14 @@ export class AttendanceService {
       const d = new Date(startDate.getTime() + i * DAY_MS);
       const k = key(d);
       const list = byDay.get(k) ?? [];
-      const expected = holidayMap.has(k) ? 0 : Math.max(expectedOn(d), list.length);
+      // A past Sunday nobody worked is a weekly off, not a day everyone was absent.
+      const weeklyOff = d.getUTCDay() === 0 && list.length === 0 && k !== key(todayIST);
+      const expected = holidayMap.has(k) || weeklyOff ? 0 : Math.max(expectedOn(d), list.length);
       const late = list.filter((r) => r.isLate).length;
       return {
         date: k,
         dayOfWeek: dayNames[d.getUTCDay()],
-        holiday: holidayMap.get(k) ?? null,
+        holiday: holidayMap.get(k) ?? (weeklyOff ? 'Weekly off' : null),
         expected,
         present: list.length,
         onTime: list.length - late,

@@ -465,7 +465,7 @@ function DayTip({ active, payload }: any) {
         {t.dayOfWeek}, {fmtDate(t.date)}
       </div>
       {t.holiday ? (
-        <div className="text-violet-700">Holiday: {t.holiday}</div>
+        <div className="text-violet-700">{t.holiday === 'Weekly off' ? 'Weekly off (no check-ins)' : `Holiday: ${t.holiday}`}</div>
       ) : (
         <>
           <TipRow color={C.onTime} label="On time" value={t.onTime} />
