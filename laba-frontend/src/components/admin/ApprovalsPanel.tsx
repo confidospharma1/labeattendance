@@ -174,18 +174,18 @@ export function ApprovalsPanel({ branches, employees, onChanged }: Props) {
 
 function FaceAdmin({ employees }: { employees: any[] }) {
   const [employeeId, setEmployeeId] = useState('');
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [profile, setProfile] = useState<{ photo: string | null; createdAt: string } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const view = async (id: string) => {
     setEmployeeId(id);
-    setPhoto(null);
+    setProfile(null);
     setMsg(null);
     if (!id) return;
     try {
       const res = await apiClient.get(`/face/${id}/photo`);
-      setPhoto(res.data.data.photo);
+      setProfile(res.data.data);
     } catch (err) {
       setMsg(apiErrorMessage(err));
     }
@@ -196,7 +196,7 @@ function FaceAdmin({ employees }: { employees: any[] }) {
     setBusy(true);
     try {
       await apiClient.delete(`/face/${employeeId}`);
-      setPhoto(null);
+      setProfile(null);
       setMsg('Face profile deleted. The employee will be asked to enrol again.');
     } catch (err) {
       setMsg(apiErrorMessage(err));
@@ -210,7 +210,7 @@ function FaceAdmin({ employees }: { employees: any[] }) {
       <h3 className="font-bold text-sm text-ink flex items-center gap-2">
         <ScanFace className="w-4 h-4 text-brand-700" /> Face profiles
       </h3>
-      <p className="text-xs text-[#64748B] mt-1">View an employee&apos;s enrolled photo, or reset it if they changed phones or the enrolment was wrong.</p>
+      <p className="text-xs text-[#64748B] mt-1">Check whether an employee has enrolled their face, or reset it if they changed phones or the enrolment was wrong. Only a face template is stored, no photo.</p>
       <div className="flex flex-wrap items-center gap-2 mt-3">
         <select value={employeeId} onChange={(e) => view(e.target.value)} className="h-9 px-2 text-xs border border-[#E2E8F0] rounded-lg bg-white min-w-[14rem]">
           <option value="">Select employee</option>
@@ -220,14 +220,15 @@ function FaceAdmin({ employees }: { employees: any[] }) {
             </option>
           ))}
         </select>
-        {photo && (
+        {profile && (
           <button onClick={reset} disabled={busy} className="h-9 px-3 rounded-lg border border-red-200 text-red-700 bg-red-50 text-xs font-semibold inline-flex items-center gap-1.5">
             <RotateCcw className="w-3.5 h-3.5" /> Reset face
           </button>
         )}
       </div>
       {/* eslint-disable-next-line @next/next/no-img-element -- data URL, nothing for next/image to optimise */}
-      {photo && <img src={photo} alt="Enrolled face" className="mt-3 w-32 h-24 object-cover rounded-lg border border-[#E2E8F0]" />}
+      {profile?.photo && <img src={profile.photo} alt="Enrolled face" className="mt-3 w-32 h-24 object-cover rounded-lg border border-[#E2E8F0]" />}
+      {profile && <div className="mt-3 text-xs text-emerald-700">Face enrolled on {new Date(profile.createdAt).toLocaleDateString('en-IN')}.</div>}
       {msg && <div className="mt-3 text-xs text-[#475569]">{msg}</div>}
     </section>
   );

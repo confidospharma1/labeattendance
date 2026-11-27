@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Loader2, ScanFace, Eye, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
-import { getHuman, readFrame, captureSelfie, FaceProof, FaceEnrollment } from '@/lib/face';
+import { getHuman, readFrame, FaceProof, FaceEnrollment } from '@/lib/face';
 
 type Mode = 'verify' | 'enroll';
 
@@ -80,7 +80,6 @@ export function FaceCapture({ mode, title, onVerified, onEnrolled, onClose }: Pr
       const descriptors: number[][] = [];
       let realSum = 0;
       let liveSum = 0;
-      let selfie = '';
       let lastSampleAt = 0;
       setPhase('align');
 
@@ -117,7 +116,6 @@ export function FaceCapture({ mode, title, onVerified, onEnrolled, onClose }: Pr
             realSum += frame.real;
             liveSum += frame.live;
             lastSampleAt = Date.now();
-            if (!selfie && videoRef.current) selfie = captureSelfie(videoRef.current);
             const needed = mode === 'enroll' ? SAMPLES_ENROLL : SAMPLES_VERIFY;
             setProgress(Math.round((descriptors.length / needed) * 100));
 
@@ -127,7 +125,7 @@ export function FaceCapture({ mode, title, onVerified, onEnrolled, onClose }: Pr
               setPhase('done');
               setHint('Done');
               if (mode === 'enroll') {
-                onEnrolled?.({ descriptors, photo: selfie });
+                onEnrolled?.({ descriptors });
               } else {
                 // average the descriptors for a steadier match
                 const avg = descriptors[0].map((_, i) => descriptors.reduce((s, d) => s + d[i], 0) / descriptors.length);
@@ -136,7 +134,6 @@ export function FaceCapture({ mode, title, onVerified, onEnrolled, onClose }: Pr
                   liveness: liveSum / descriptors.length,
                   antispoof: realSum / descriptors.length,
                   blinkDetected: true,
-                  selfie,
                 });
               }
               return;

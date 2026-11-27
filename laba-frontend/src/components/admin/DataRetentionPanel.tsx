@@ -182,7 +182,7 @@ export function DataRetentionPanel({ isSuperAdmin, onChanged }: { isSuperAdmin: 
           <Database className="w-5 h-5 text-brand-700" /> Data & storage
         </h2>
         <p className="text-xs text-[#64748B]">
-          The free database holds 1 GB. Attendance history (with check-in selfies) is kept for a set number of days, then deleted automatically.
+          The free database holds 1 GB. Attendance history is kept for a set number of days, then deleted automatically.
           You are warned {status?.warningDays ?? 5} days before, and can download it as Excel at any time.
         </p>
       </div>
@@ -358,7 +358,7 @@ export function DataRetentionPanel({ isSuperAdmin, onChanged }: { isSuperAdmin: 
                 <h4 className="font-bold text-ink">Download and delete history?</h4>
                 <p className="text-xs text-[#475569] mt-1">
                   J-Track will download all attendance history up to <strong>{fmtDate(through)}</strong> as Excel, then permanently delete it from the
-                  database, including selfies. Employees, locations and face enrolments are kept. If the download fails, nothing is deleted.
+                  database. Employees, locations and face enrolments are kept. If the download fails, nothing is deleted.
                 </p>
               </div>
             </div>

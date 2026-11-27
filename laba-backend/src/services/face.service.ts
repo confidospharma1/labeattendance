@@ -6,7 +6,7 @@ import { APP_CONSTANTS } from '../config/constants';
 
 export interface EnrollInput {
   descriptors: number[][];
-  photo: string;
+  photo?: string;
   consent: boolean;
 }
 
@@ -54,7 +54,7 @@ export class FaceService {
       data: {
         employeeId,
         embeddings: input.descriptors,
-        photo: input.photo,
+        photo: '', // no image is stored, only the face template
         modelVersion: FACE_MODEL_VERSION,
         consentAt: new Date(),
       },
@@ -78,7 +78,8 @@ export class FaceService {
       select: { photo: true, createdAt: true },
     });
     if (!profile) throw new AppError('No face enrolled for this employee.', 404, 'FACE_NOT_ENROLLED');
-    return profile;
+    // Enrolments made before photos stopped being stored may still have one.
+    return { enrolled: true, photo: profile.photo || null, createdAt: profile.createdAt };
   }
 
   /**

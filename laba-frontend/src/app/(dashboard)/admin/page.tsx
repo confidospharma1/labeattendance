@@ -45,6 +45,7 @@ import { ConfirmDeleteModal } from '@/components/common/ConfirmDeleteModal';
 import { PolicyModal } from '@/components/policy/PolicyModal';
 import { Logo } from '@/components/common/Logo';
 import { DashboardView, BoardFocus } from '@/components/analytics/DashboardView';
+import { WorkReportsExport } from '@/components/admin/WorkReportsExport';
 import { DataRetentionPanel, RetentionBanner, RetentionStatus } from '@/components/admin/DataRetentionPanel';
 import { saveFile, filenameFrom } from '@/lib/download';
 import { AttendanceBoard } from '@/components/admin/AttendanceBoard';
@@ -380,6 +381,7 @@ export default function AdminDashboard() {
             }
           />
         )}
+        {activeTab === 'attendance' && <WorkReportsExport employees={employees} />}
 
         {activeTab === 'shifts' && <ShiftsPanel branches={branches} />}
         {activeTab === 'camps' && <CampsPanel employees={employees} branches={branches} />}

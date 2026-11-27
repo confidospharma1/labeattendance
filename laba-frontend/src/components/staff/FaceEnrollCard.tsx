@@ -33,7 +33,7 @@ export function FaceEnrollCard({ onEnrolled }: { onEnrolled: () => void }) {
           className="mt-0.5 w-5 h-5 accent-brand-700"
         />
         <span>
-          I agree that J-Track stores a face template and a small photo of me, used only to verify my attendance.
+          I agree that J-Track stores a face template (numbers, not a photo) of me, used only to verify my attendance.
           I can ask my admin to delete it.
         </span>
       </label>

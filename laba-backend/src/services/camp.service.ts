@@ -243,7 +243,6 @@ export class CampService {
           checkInAccuracyMetres: input.accuracy,
           checkInDistanceMetres: geo.distanceMetres,
           checkInFaceScore: faceScore,
-          checkInSelfie: input.face?.selfie ?? null,
           checkInIsMockLocation: input.isMockLocation ?? null,
         },
       });

@@ -10,8 +10,8 @@ import { CATEGORY_LABEL } from '../utils/staff';
 /**
  * Data retention for the free Neon plan.
  *
- * Attendance history is the only data that grows every day: attendance records with their check-in and
- * check-out selfies, field-route visits and camp check-ins. Anything dated more than `retentionDays` ago is
+ * Attendance history is the only data that grows every day: attendance records, field-route visits and
+ * camp check-ins (no images are stored). Anything dated more than `retentionDays` ago is
  * deleted automatically. Admins see a warning for the last WARNING_DAYS days before a date is deleted, and can
  * download that history as Excel at any time; downloading the archive deletes the archived days straight away.
  * Employees, locations, shifts, customers, face enrolments, holidays and policies are never deleted here.

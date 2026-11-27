@@ -11,6 +11,8 @@ import {
   Tooltip,
   Cell,
   LabelList,
+  PieChart,
+  Pie,
 } from 'recharts';
 import { CheckCircle2, Clock, MapPin, Timer, RefreshCw, Loader2, Users, ScanFace, AlertTriangle, MousePointerClick } from 'lucide-react';
 import { apiClient, apiErrorMessage } from '@/lib/api';
@@ -202,16 +204,34 @@ export function DashboardView({ summary, onFocus, refreshKey = 0 }: Props) {
             <Empty text="No active staff yet." />
           ) : (
             <div className="space-y-4">
-              <div className="flex h-9 w-full rounded-lg overflow-hidden gap-[2px] bg-white" role="img" aria-label="Today's attendance split">
-                {today.map((p) => (
-                  <button
-                    key={p.key + p.label}
-                    title={`${p.label}: ${p.value}`}
-                    onClick={() => onFocus({ date: istToday(), status: p.key, category: 'ALL', location: 'ALL' })}
-                    style={{ width: `${(p.value / Math.max(1, total)) * 100}%`, background: p.color }}
-                    className="h-full min-w-[6px] hover:opacity-80 transition-opacity first:rounded-l-lg last:rounded-r-lg"
-                  />
-                ))}
+              {/* Donut: click a slice to list those staff below */}
+              <div className="relative h-[190px]" role="img" aria-label="Today's attendance split">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={today}
+                      dataKey="value"
+                      nameKey="label"
+                      innerRadius="62%"
+                      outerRadius="92%"
+                      paddingAngle={today.length > 1 ? 2 : 0}
+                      stroke="#fff"
+                      strokeWidth={2}
+                      cursor="pointer"
+                      isAnimationActive={false}
+                      onClick={(d: any) => d?.key && onFocus({ date: istToday(), status: d.key, category: 'ALL', location: 'ALL' })}
+                    >
+                      {today.map((p) => (
+                        <Cell key={p.key + p.label} fill={p.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<SliceTip total={total} />} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-2xl font-bold text-ink leading-none">{summary?.presentCount ?? 0}</span>
+                  <span className="text-[11px] text-[#64748B] mt-1">present of {total}</span>
+                </div>
               </div>
               <ul className="grid grid-cols-2 gap-2">
                 {today.map((p) => (
@@ -476,6 +496,19 @@ function DayTip({ active, payload }: any) {
           </div>
         </>
       )}
+    </TipBox>
+  );
+}
+
+function SliceTip({ active, payload, total }: any) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0].payload;
+  return (
+    <TipBox>
+      <TipRow color={p.color} label={p.label} value={p.value} />
+      <div className="text-[#64748B]">
+        {Math.round((p.value / Math.max(1, total)) * 100)}% of staff · click to see who
+      </div>
     </TipBox>
   );
 }

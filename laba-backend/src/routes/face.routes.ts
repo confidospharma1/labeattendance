@@ -13,7 +13,7 @@ router.use(authenticate);
 const enrollSchema = z.object({
   body: z.object({
     descriptors: z.array(z.array(z.number()).min(64).max(2048)).min(2).max(5),
-    photo: z.string().regex(/^data:image\/jpeg;base64,/).max(120_000),
+    photo: z.string().max(120_000).optional(), // ignored: only the face template is stored
     consent: z.literal(true, { errorMap: () => ({ message: 'You must give consent to enrol your face.' }) }),
   }),
 });

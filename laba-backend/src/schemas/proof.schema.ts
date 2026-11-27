@@ -14,11 +14,8 @@ export const faceProofSchema = z.object({
   liveness: z.number().min(0).max(1),
   antispoof: z.number().min(0).max(1),
   blinkDetected: z.boolean(),
-  // Small JPEG data URL (thumbnail) stored for admin audit
-  selfie: z
-    .string()
-    .regex(/^data:image\/jpeg;base64,/, 'Selfie must be a JPEG data URL')
-    .max(120_000, 'Selfie image is too large'),
+  // Older app versions still send a selfie thumbnail; it is accepted but never stored (saves database space).
+  selfie: z.string().max(120_000, 'Selfie image is too large').optional(),
 });
 
 export type GpsProof = z.infer<typeof gpsProofSchema>;

@@ -225,7 +225,6 @@ export class AttendanceService {
           checkInLocationRefType: loc.refType,
           checkInLocationName: loc.name,
           checkInFaceScore: faceScore,
-          checkInSelfie: input.face?.selfie ?? null,
           checkInIsMockLocation: input.isMockLocation ?? null,
         },
       });
@@ -288,7 +287,6 @@ export class AttendanceService {
           checkOutLocationRefType: loc.refType,
           checkOutLocationName: loc.name,
           checkOutFaceScore: faceScore,
-          checkOutSelfie: input.face?.selfie ?? null,
           workReport: input.workReport.trim(),
         },
       });

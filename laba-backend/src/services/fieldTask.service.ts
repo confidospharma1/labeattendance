@@ -324,7 +324,6 @@ export class FieldTaskService {
           visitAccuracyMetres: input.accuracy,
           visitDistanceMetres: geo.distanceMetres,
           visitFaceScore: faceScore,
-          visitSelfie: input.face?.selfie ?? null,
           visitIsMockLocation: input.isMockLocation ?? null,
         },
       });

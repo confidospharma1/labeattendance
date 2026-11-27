@@ -78,28 +78,13 @@ export function readFrame(result: Result): FaceFrame {
   };
 }
 
-/** Small JPEG thumbnail of the current video frame stored with the attendance record for admin review. */
-export function captureSelfie(video: HTMLVideoElement, width = 240): string {
-  const canvas = document.createElement('canvas');
-  const ratio = video.videoHeight / video.videoWidth || 0.75;
-  canvas.width = width;
-  canvas.height = Math.round(width * ratio);
-  const ctx = canvas.getContext('2d')!;
-  ctx.translate(canvas.width, 0);
-  ctx.scale(-1, 1); // mirror like the preview
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/jpeg', 0.7);
-}
-
 export interface FaceProof {
   descriptor: number[];
   liveness: number;
   antispoof: number;
   blinkDetected: boolean;
-  selfie: string;
 }
 
 export interface FaceEnrollment {
   descriptors: number[][];
-  photo: string;
 }
