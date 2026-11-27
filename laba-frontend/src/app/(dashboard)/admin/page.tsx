@@ -32,7 +32,9 @@ import {
   Store,
   UserCheck,
   Hourglass,
+  KeyRound,
 } from 'lucide-react';
+import { ChangePasswordDialog, ResetPasswordDialog } from '@/components/auth/PasswordDialogs';
 import { AddBranchModal } from '@/components/branch/AddBranchModal';
 import { EditBranchModal } from '@/components/branch/EditBranchModal';
 import { ApprovalsPanel } from '@/components/admin/ApprovalsPanel';
@@ -111,6 +113,10 @@ export default function AdminDashboard() {
 
   // Edit & Delete state
   const [editingEmployee, setEditingEmployee] = useState<any | null>(null);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [resettingEmployee, setResettingEmployee] = useState<any | null>(null);
+  // Super admin accounts change their own password; admins can only reset staff.
+  const canResetPassword = (emp: any) => emp.role !== 'SUPER_ADMIN' && (emp.role !== 'ADMIN' || user?.role === 'SUPER_ADMIN');
   const [editingBranch, setEditingBranch] = useState<any | null>(null);
   const [editingAttendance, setEditingAttendance] = useState<any | null>(null);
   const [deletingItem, setDeletingItem] = useState<{
@@ -274,6 +280,9 @@ export default function AdminDashboard() {
                 {(user?.email || '?').slice(0, 1)}
               </span>
               <span className="text-xs font-medium text-[#475569] max-w-[14rem] truncate">{user?.email}</span>
+              <button onClick={() => setChangingPassword(true)} className="p-2 text-[#64748B] hover:text-brand-700 hover:bg-brand-50 rounded-lg" title="Change password">
+                <KeyRound className="w-4 h-4" />
+              </button>
               <button onClick={() => logout()} className="p-2 text-[#64748B] hover:text-red-600 hover:bg-red-50 rounded-lg" title="Sign out">
                 <LogOut className="w-4 h-4" />
               </button>
@@ -312,6 +321,15 @@ export default function AdminDashboard() {
                 className="flex items-center justify-center gap-2 py-2.5 border border-[#E2E8F0] rounded-lg text-xs font-semibold text-red-600"
               >
                 <LogOut className="w-3.5 h-3.5" /> Sign out
+              </button>
+              <button
+                onClick={() => {
+                  setChangingPassword(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="col-span-2 flex items-center justify-center gap-2 py-2.5 border border-[#E2E8F0] rounded-lg text-xs font-semibold text-[#475569]"
+              >
+                <KeyRound className="w-3.5 h-3.5" /> Change password
               </button>
             </div>
           </div>
@@ -505,6 +523,15 @@ export default function AdminDashboard() {
                           <Edit2 className="w-3 h-3" />
                           <span>Edit</span>
                         </button>
+                        {canResetPassword(emp) && (
+                          <button
+                            onClick={() => setResettingEmployee(emp)}
+                            className="flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold text-[#475569] bg-white border border-[#E2E8F0] rounded-lg hover:bg-[#F4F6FB] transition-colors"
+                          >
+                            <KeyRound className="w-3 h-3" />
+                            <span>Password</span>
+                          </button>
+                        )}
                         <button
                           onClick={() =>
                             setDeletingItem({
@@ -616,6 +643,15 @@ export default function AdminDashboard() {
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
                               </button>
+                              {canResetPassword(emp) && (
+                                <button
+                                  onClick={() => setResettingEmployee(emp)}
+                                  className="p-1.5 text-[#475569] hover:bg-[#EEF2F7] rounded transition-colors"
+                                  title="Reset password"
+                                >
+                                  <KeyRound className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                               <button
                                 onClick={() =>
                                   setDeletingItem({
@@ -1106,6 +1142,9 @@ export default function AdminDashboard() {
           onClose={() => setEditingEmployee(null)}
           onSuccess={fetchAdminData}
         />
+
+        {changingPassword && <ChangePasswordDialog onClose={() => setChangingPassword(false)} />}
+        {resettingEmployee && <ResetPasswordDialog employee={resettingEmployee} onClose={() => setResettingEmployee(null)} />}
 
         <EditAttendanceModal
           isOpen={!!editingAttendance}

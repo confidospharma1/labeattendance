@@ -31,3 +31,15 @@ export const changePasswordSchema = z.object({
 export type LoginInput = z.infer<typeof loginSchema>['body'];
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>['body'];
 
+/** Admin sets a new password for a staff member who forgot theirs. */
+export const resetPasswordSchema = z.object({
+  params: z.object({ id: z.string().uuid('Invalid employee id') }),
+  body: z.object({
+    newPassword: z
+      .string()
+      .min(8, 'New password must be at least 8 characters')
+      .regex(/[A-Z]/, 'New password must contain at least one uppercase letter')
+      .regex(/[0-9]/, 'New password must contain at least one number'),
+  }),
+});
+

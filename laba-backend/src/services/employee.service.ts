@@ -165,7 +165,7 @@ export class EmployeeService {
         take: query.limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          user: { select: { email: true, lastLoginAt: true } },
+          user: { select: { email: true, lastLoginAt: true, role: true } },
           shift: { select: { id: true, name: true, startTime: true, endTime: true } },
           branchAssignments: {
             where: { isCurrent: true },
@@ -180,6 +180,7 @@ export class EmployeeService {
       employeeCode: emp.employeeCode,
       fullName: emp.fullName,
       email: emp.user.email,
+      role: emp.user.role,
       mobile: emp.mobile,
       employeeType: emp.employeeType,
       staffCategory: emp.staffCategory,

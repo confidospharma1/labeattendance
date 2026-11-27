@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, RefreshCw, Home, History, Loader2, AlertCircle, Tent, Store, Route } from 'lucide-react';
+import { LogOut, RefreshCw, Home, History, Loader2, AlertCircle, Tent, Store, Route, KeyRound } from 'lucide-react';
+import { ChangePasswordDialog } from '@/components/auth/PasswordDialogs';
 import { useAuth } from '@/providers/AuthProvider';
 import { apiClient, apiErrorMessage } from '@/lib/api';
 import { formatISTDate } from '@/lib/utils';
@@ -19,6 +20,7 @@ type Tab = 'home' | 'camps' | 'customers' | 'history';
 
 export default function EmployeeHome() {
   const { user, logout, loading: authLoading } = useAuth();
+  const [changingPassword, setChangingPassword] = useState(false);
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('home');
   const [today, setToday] = useState<any>(null);
@@ -97,6 +99,9 @@ export default function EmployeeHome() {
               <button onClick={load} className="p-2 rounded-full hover:bg-white/10" aria-label="Refresh">
                 <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
               </button>
+              <button onClick={() => setChangingPassword(true)} className="p-2 rounded-full hover:bg-white/10" aria-label="Change password" title="Change password">
+                <KeyRound className="w-5 h-5" />
+              </button>
               <button onClick={() => logout()} className="p-2 rounded-full hover:bg-white/10" aria-label="Sign out">
                 <LogOut className="w-5 h-5" />
               </button>
@@ -173,6 +178,7 @@ export default function EmployeeHome() {
           ))}
         </div>
       </nav>
+      {changingPassword && <ChangePasswordDialog onClose={() => setChangingPassword(false)} />}
     </div>
   );
 }

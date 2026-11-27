@@ -174,6 +174,32 @@ export class AuthService {
   }
 
   /**
+   * Admin: sets a new password for an employee's login (forgotten password).
+   * Admins can reset staff only; the super admin can also reset admins.
+   * Super admin accounts change their own password with changePassword.
+   */
+  public async adminResetPassword(requester: { userId: string; role: string; organizationId: string }, employeeId: string, newPassword: string) {
+    const employee = await prisma.employee.findFirst({
+      where: { id: employeeId, organizationId: requester.organizationId },
+      select: { fullName: true, user: { select: { id: true, role: true, deletedAt: true } } },
+    });
+    if (!employee?.user || employee.user.deletedAt) throw new AppError('Employee login not found.', 404, 'NOT_FOUND');
+    const target = employee.user;
+    if (target.id === requester.userId) {
+      throw new AppError('Use "Change password" to change your own password.', 400, 'USE_CHANGE_PASSWORD');
+    }
+    if (target.role === 'SUPER_ADMIN' || (target.role === 'ADMIN' && requester.role !== 'SUPER_ADMIN')) {
+      throw new AppError('You cannot reset the password of this account.', 403, 'FORBIDDEN');
+    }
+
+    await prisma.user.update({
+      where: { id: target.id },
+      data: { passwordHash: await hashPassword(newPassword), failedLoginAttempts: 0, lockedUntil: null },
+    });
+    return { reset: true, employee: employee.fullName };
+  }
+
+  /**
    * Fetches profile of current user.
    */
   public async getMe(userId: string) {

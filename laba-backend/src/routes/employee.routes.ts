@@ -10,6 +10,8 @@ import {
   listEmployeesQuerySchema,
 } from '../schemas/employee.schema';
 import { approveSchema, rejectSchema } from '../schemas/registration.schema';
+import { resetPasswordSchema } from '../schemas/auth.schema';
+import { authService } from '../services/auth.service';
 import { registrationService } from '../services/registration.service';
 import { sendSuccess } from '../utils/response';
 
@@ -96,6 +98,15 @@ router.patch(
   validate(updateEmployeeStatusSchema),
   employeeController.updateEmployeeStatus
 );
+
+// Set a new password for an employee who forgot theirs
+router.post('/:id/reset-password', authorize(['SUPER_ADMIN', 'ADMIN']), validate(resetPasswordSchema), async (req, res, next) => {
+  try {
+    sendSuccess(res, await authService.adminResetPassword(req.user!, String(req.params.id), req.body.newPassword));
+  } catch (e) {
+    next(e);
+  }
+});
 
 export const employeeRoutes = router;
 
